@@ -1,0 +1,31 @@
+{
+    "name": "euphony.js",
+    "version": "0.1.3",
+    "description": "Sound Communication Library",
+    "main": "./euphony.js",
+    "keywords": [
+        "sound",
+        "Inaudible frequency",
+        "communication library"
+    ],
+    "author": "jbear",
+    "license": "Apache-2.0",
+    "scripts": {
+        "build": "webpack --config webpack.config.js",
+        "dev": "webpack-dev-server",
+        "es6": "webpack --config webpack.config.es6.js"
+    },
+    "dependencies": {
+        "babel": "^6.23.0",
+        "babel-core": "^6.26.3",
+        "babel-loader": "^8.0.6",
+        "npm": "^6.11.3",
+        "uglifyjs-webpack-plugin": "^2.2.0"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.6.0",
+        "babel-preset-env": "^1.7.0",
+        "webpack": "^4.39.3",
+        "webpack-cli": "^3.3.8"
+    }
+}
