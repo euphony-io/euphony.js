@@ -1,3 +1,18 @@
+/*
+ * Copyright 2013-2019 EUPHONY. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 window.Euphony = (function() {
     function euphony() {
         var about = {
@@ -14,8 +29,10 @@ window.Euphony = (function() {
         this.ZEROPOINT = 18000;
 
         this.context = new AudioContext();
+        this.isAudioWorkletAvailable = Boolean(
+            this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
+        
         this.scriptProcessor = null;
-        this.startPointBuffer = new Array();
         this.outBuffer = new Array();
         this.playBuffer = new Array();
         this.playBufferIdx = 0;
@@ -58,23 +75,59 @@ window.Euphony = (function() {
         },
         play: function() {
             let T = this;
-            var source = T.context.createBufferSource();
-            source.buffer = T.context.createBuffer(2, T.SAMPLERATE*2, T.SAMPLERATE);
-            T.scriptProcessor = T.context.createScriptProcessor(T.FFTSIZE, 0, 2);
-            T.scriptProcessor.loop = true;
-            T.scriptProcessor.onaudioprocess = function(e) {
-                var outputBuf = e.outputBuffer.getChannelData(0);
-                var outputBuf2 = e.outputBuffer.getChannelData(1);
+            /* scriptProcessor is deprecated. so apply to AudioWorklet */
+            if(T.isAudioWorkletAvailable) {
+                /*
+                  AudioWorkletNode Declaration
+                */
+                class EuphonyNode extends AudioWorkletNode {
+                    constructor(context) {
+                        super(context, 'euphony-processor');
+                        this.port.onmessage = this.handleMsg.bind(this);
+                        this.port.postMessage({
+                            'message': 'created EuphonyNode'
+                        });
+                    }
 
-                for (let i = 0; i < outputBuf.length; i++)
-                    outputBuf[i] = outputBuf2[i] = T.playBuffer[T.playBufferIdx][i];
-            
-                if(T.playBuffer.length == ++(T.playBufferIdx)) T.playBufferIdx = 0;
-            };
+                    handleMsg(e) {
+                        this.port.postMessage({
+                            'message': 'Hi, Euphony'
+                        });
+                    }
+                }
+                
+                let audioWorklet = T.context.audioWorklet;
+                const source = T.context.createBufferSource();
+                
+                audioWorklet.addModule('./euphony-processor.mjs').then(() => {
+                    //let oscillator = new OscillatorNode(T.context);
+                    let euphonyWorkletNode = new EuphonyNode(T.context);
+                    source.connect(euphonyWorkletNode);
+                    euphonyWorkletNode.connect(T.context.destination);
+                    //source.connect(euphonyWorkletNode).connect(T.context.destination);
+                    source.start();
+                });
+            }
+            else
+            {
+                var source = T.context.createBufferSource();
+                source.buffer = T.context.createBuffer(2, T.SAMPLERATE*2, T.SAMPLERATE);
+                T.scriptProcessor = T.context.createScriptProcessor(T.FFTSIZE, 0, 2);
+                T.scriptProcessor.loop = true;
+                T.scriptProcessor.onaudioprocess = function(e) {
+                    var outputBuf = e.outputBuffer.getChannelData(0);
+                    var outputBuf2 = e.outputBuffer.getChannelData(1);
 
-            source.connect(T.scriptProcessor);
-            T.scriptProcessor.connect(T.context.destination);
-            source.start();
+                    for (let i = 0; i < outputBuf.length; i++)
+                        outputBuf[i] = outputBuf2[i] = T.playBuffer[T.playBufferIdx][i];
+                    
+                    if(T.playBuffer.length == ++(T.playBufferIdx)) T.playBufferIdx = 0;
+                };
+
+                source.connect(T.scriptProcessor);
+                T.scriptProcessor.connect(T.context.destination);
+                source.start();
+            }
             /* scriptProcessor is deprecated. so change it.
             let ctx = new OfflineAudioContext(2, 1, T.SAMPLERATE);
             let audioWorklet = ctx.audioWorklet;
