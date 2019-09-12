@@ -13,7 +13,7 @@ const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
     entry: {
-        'euphony-latest.min' : './euphony.js',
+        'euphony.min' : './euphony.js',
         'euphony-0.1.3.min' : './euphony.js'
     },
     output: {
