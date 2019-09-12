@@ -12,31 +12,18 @@ const path = require('path');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
-    entry: './euphony.js',
+    entry: {
+        'euphony-latest.min' : './euphony.js',
+        'euphony-0.1.3.min' : './euphony.js'
+           },
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: 'euphony-0.1.3.min.js',
+        filename: '[name].js',
 	libraryTarget: 'window',
 	globalObject: 'this',
 	libraryExport: 'default',
 	library: 'euphony.js'
     },
-	optimization: {
-		minimizer: [
-			new UglifyJsPlugin({ 
-			cache: true,
-			uglifyOptions: {
-				mangle: {
-					keep_fnames:true	
-				},
-				compress: {
-					keep_fnames:true,
-					drop_console:true
-				}	
-			}	
-			} )
-		]
-	},
     mode: 'production',
     module: {
         rules: [
