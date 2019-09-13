@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-window.Euphony = (function() {
+export var Euphony = (function() {
     function euphony() {
         var about = {
-            VERSION: '0.1.2',
+            VERSION: '0.1.3',
             AUTHOR: "Ji-woong Choi"
         };
 
@@ -82,6 +82,7 @@ window.Euphony = (function() {
                 */
                 class EuphonyNode extends AudioWorkletNode {
                     constructor(context) {
+                        console.log("created EuphonyAudioWorkletNode");
                         super(context, 'euphony-processor');
                         this.port.onmessage = this.handleMsg.bind(this);
                         this.port.postMessage({
@@ -98,15 +99,26 @@ window.Euphony = (function() {
                 
                 let audioWorklet = T.context.audioWorklet;
                 const source = T.context.createBufferSource();
-                
-                audioWorklet.addModule('./euphony-processor.mjs').then(() => {
+
+                const testCode = async(context) => {
+                    audioWorklet.addModule('./euphony-processor.mjs');
+                    //let oscillator = new OscillatorNode(T.context);
+                    let euphonyWorkletNode = new EuphonyNode(context);
+                    source.connect(euphonyWorkletNode);
+                    euphonyWorkletNode.connect(context.destination);
+                    //source.connect(euphonyWorkletNode).connect(T.context.destination);
+                    source.start();
+                };
+
+                testCode(T.context);
+                /*audioWorklet.addModule('./euphony-processor.mjs').then(() => {
                     //let oscillator = new OscillatorNode(T.context);
                     let euphonyWorkletNode = new EuphonyNode(T.context);
                     source.connect(euphonyWorkletNode);
                     euphonyWorkletNode.connect(T.context.destination);
                     //source.connect(euphonyWorkletNode).connect(T.context.destination);
                     source.start();
-                });
+                });*/
             }
             else
             {
