@@ -21,7 +21,7 @@ export var Euphony = (function() {
         };
 
         this.FFTSIZE = 2048;
-        this.BUFFERSIZE = 2048;
+        this.BUFFERSIZE = 128;
         this.PI = 3.141592653589793;
         this.PI2 = this.PI * 2;
         this.SAMPLERATE = 44100;
@@ -37,9 +37,12 @@ export var Euphony = (function() {
         this.playBuffer = new Array();
         this.playBufferIdx = 0;
 
-        this.startPointBuffer = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT - this.SPAN));
+        this.startPointBuffer = this.makeStaticFrequency(17914);//
+            //this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT - this.SPAN));
         for (let i = 0; i < 16; i++)
-            this.outBuffer[i] = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN));               
+            this.outBuffer[i] = this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN);
+
+        //this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN));               
         this.playBufferIdx = 0;
     };
 
@@ -84,15 +87,12 @@ export var Euphony = (function() {
                     constructor(context) {
                         console.log("created EuphonyAudioWorkletNode");
                         super(context, 'euphony-processor');
-                        this.port.onmessage = this.handleMsg.bind(this);
+                        this.port.onmessage = e => {
+                            console.log(e);
+                        };
                         this.port.postMessage({
-                            'message': 'created EuphonyNode'
-                        });
-                    }
-
-                    handleMsg(e) {
-                        this.port.postMessage({
-                            'message': 'Hi, Euphony'
+                            'message': 'created EuphonyNode',
+                            'buffers': T.playBuffer
                         });
                     }
                 }
@@ -100,13 +100,13 @@ export var Euphony = (function() {
                 let audioWorklet = T.context.audioWorklet;
                 const source = T.context.createBufferSource();
 
-                const testCode = async(context) => {
-                    audioWorklet.addModule('./euphony-processor.mjs');
+                const testCode = async(c) => {
+                    await c.audioWorklet.addModule('js/euphony.js/euphony-processor.js');
                     //let oscillator = new OscillatorNode(T.context);
-                    let euphonyWorkletNode = new EuphonyNode(context);
-                    source.connect(euphonyWorkletNode);
-                    euphonyWorkletNode.connect(context.destination);
-                    //source.connect(euphonyWorkletNode).connect(T.context.destination);
+                    let euphonyWorkletNode = new EuphonyNode(c);
+                    //source.connect(euphonyWorkletNode);
+                    //euphonyWorkletNode.connect(c.destination);
+                    source.connect(euphonyWorkletNode).connect(c.destination);
                     source.start();
                 };
 
@@ -162,9 +162,10 @@ export var Euphony = (function() {
         
         makeStaticFrequency: function(freq){
             let T = this;
-            let buffer = new Array();
+            let buffer = new SharedArrayBuffer(T.BUFFERSIZE * 4);
+            let pBuffer = new Float32Array(buffer);
             for (let i = 0; i < T.BUFFERSIZE; i++)
-                buffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
+                pBuffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
             return buffer;
         },
         
@@ -173,10 +174,12 @@ export var Euphony = (function() {
             var mini_window,
                 fade_section = T.BUFFERSIZE / 8;
 
+            let pBuffer = new Float32Array(buffer);
+
             for (let i = 0; i < fade_section; i++) {
                 mini_window = i / fade_section;
-                buffer[i] *= mini_window;
-                buffer[T.BUFFERSIZE - 1 - i] *= mini_window;
+                pBuffer[i] *= mini_window;
+                pBuffer[T.BUFFERSIZE - 1 - i] *= mini_window;
             }
             return buffer;
         },
