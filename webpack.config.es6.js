@@ -14,7 +14,6 @@ const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 module.exports = {
     entry: {
         'euphony.min' : './euphony.js',
-        'euphony-0.1.3.min' : './euphony.js'
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
