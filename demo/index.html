@@ -19,16 +19,18 @@
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title> Euphony for ES6 demo </title>
-    <script src = '../euphony.js'></script>
-    <script>
+    <script type='module'>
+      import {Euphony} from "../euphony.js"
+      
       var euphy = new Euphony();
       var btnSwt = false;
 
-      function generateSoundData() {
+      window.generateSoundData = function() {
           if(btnSwt) {
               euphy.stop();
               document.getElementById("euphy_btn").value = "broadcast";
               btnSwt = false;
+              console.log("STOP!");
           }
           else {
               var code = document.getElementById("euphy_text");
@@ -36,7 +38,16 @@
               euphy.play();
               document.getElementById("euphy_btn").value = "stop";
               btnSwt = true;
+              console.log("PLAY!");
           }
+      }
+
+      let desc = window.document.getElementById("desc");
+      if(!euphy.isAudioWorkletAvailable) {
+          desc.innerHTML += "AudioWorklet is not supported.<br/>";
+      }
+      if(!euphy.isSABAvailable) {
+          desc.innerHTML += "SharedArrayBuffer is not supported. <br/>";
       }
     </script>
   </head>
@@ -48,6 +59,9 @@
       <p>
         <input id='euphy_text' class='demo_text_edit' type='text' value='hello, euphony'  /> <input id='euphy_btn' class='demo_btn' type='button' value='broadcast' onclick='generateSoundData()' />
       </p>
+      <div id='desc'>
+        <strong>Description</strong><br/>
+      </div>
     </center>  
     
   </body>

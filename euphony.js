@@ -21,7 +21,7 @@ export var Euphony = (function() {
         };
 
         this.FFTSIZE = 2048;
-        this.BUFFERSIZE = 128;
+        this.BUFFERSIZE = 2048;
         this.PI = 3.141592653589793;
         this.PI2 = this.PI * 2;
         this.SAMPLERATE = 44100;
@@ -29,20 +29,30 @@ export var Euphony = (function() {
         this.ZEROPOINT = 18000;
 
         this.context = new AudioContext();
+        this.isSABAvailable = true;
         this.isAudioWorkletAvailable = Boolean(
             this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
+
+        /*
+          DATE : 190916
+          Firefox does not support SharedArrayBuffer due to the spectre set of vulnerabilties.
+          */
+        try {
+            let sab = SharedArrayBuffer;
+        } catch (e) {
+            console.log(e instanceof ReferenceError);
+            this.isAudioWorkletAvailable = false;
+            this.isSABAvailable = false;
+        }
         
         this.scriptProcessor = null;
         this.outBuffer = new Array();
         this.playBuffer = new Array();
         this.playBufferIdx = 0;
 
-        this.startPointBuffer = this.makeStaticFrequency(17914);//
-            //this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT - this.SPAN));
+        this.startPointBuffer = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT - this.SPAN));
         for (let i = 0; i < 16; i++)
-            this.outBuffer[i] = this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN);
-
-        //this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN));               
+            this.outBuffer[i] = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN)); 
         this.playBufferIdx = 0;
     };
 
@@ -122,23 +132,26 @@ export var Euphony = (function() {
             }
             else
             {
-                var source = T.context.createBufferSource();
-                source.buffer = T.context.createBuffer(2, T.SAMPLERATE*2, T.SAMPLERATE);
+                console.log(T.playBuffer);
+                T.source = T.context.createBufferSource();
+                T.source.buffer = T.context.createBuffer(2, T.SAMPLERATE*2, T.SAMPLERATE);
                 T.scriptProcessor = T.context.createScriptProcessor(T.FFTSIZE, 0, 2);
                 T.scriptProcessor.loop = true;
                 T.scriptProcessor.onaudioprocess = function(e) {
                     var outputBuf = e.outputBuffer.getChannelData(0);
                     var outputBuf2 = e.outputBuffer.getChannelData(1);
 
-                    for (let i = 0; i < outputBuf.length; i++)
+                    outputBuf.set(T.playBuffer[T.playBufferIdx]);
+                    outputBuf2.set(T.playBuffer[T.playBufferIdx]);
+                    /*for (let i = 0; i < outputBuf.length; i++)
                         outputBuf[i] = outputBuf2[i] = T.playBuffer[T.playBufferIdx][i];
-                    
+                    */
                     if(T.playBuffer.length == ++(T.playBufferIdx)) T.playBufferIdx = 0;
                 };
 
-                source.connect(T.scriptProcessor);
+                T.source.connect(T.scriptProcessor);
                 T.scriptProcessor.connect(T.context.destination);
-                source.start();
+                T.source.start();
             }
             /* scriptProcessor is deprecated. so change it.
             let ctx = new OfflineAudioContext(2, 1, T.SAMPLERATE);
@@ -155,15 +168,29 @@ export var Euphony = (function() {
         
         stop: function() {
             let T = this;
-            T.scriptProcessor.disconnect();
-            T.playBuffer = new Array();
-            T.playBufferIdx = 0;
+            T.source.stop();
+            T.source.onended = e => {
+                console.log("be exited");
+                T.source.disconnect(T.scriptProcessor);
+                T.scriptProcessor.disconnect(T.context);
+                T.playBuffer = new Array();
+                T.playBufferIdx = 0;
+            };
         },
         
         makeStaticFrequency: function(freq){
             let T = this;
-            let buffer = new SharedArrayBuffer(T.BUFFERSIZE * 4);
-            let pBuffer = new Float32Array(buffer);
+            let buffer = null;
+            let pBuffer = null;
+            if(T.isSABAvailable){
+                buffer = new SharedArrayBuffer(T.BUFFERSIZE * 4);
+                pBuffer = new Float32Array(buffer);
+            }
+            else {
+                buffer = new Float32Array(T.BUFFERSIZE);
+                pBuffer = buffer;
+            }
+            
             for (let i = 0; i < T.BUFFERSIZE; i++)
                 pBuffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
             return buffer;
@@ -174,7 +201,11 @@ export var Euphony = (function() {
             var mini_window,
                 fade_section = T.BUFFERSIZE / 8;
 
-            let pBuffer = new Float32Array(buffer);
+            let pBuffer = null;
+            if(buffer.constructor === Float32Array)
+                pBuffer = buffer;
+            else
+                pBuffer = new Float32Array(buffer);
 
             for (let i = 0; i < fade_section; i++) {
                 mini_window = i / fade_section;
