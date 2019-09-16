@@ -25,15 +25,8 @@ class EuphonyProcessor extends AudioWorkletProcessor {
     constructor() {
         // The super constructor call is required.
         super();
-        let T = this;
-        this.outBuffer = [];
-        this.outIndex = 0;
         this.port.onmessage = e => {
             console.log('[Processor:Received] ' + e.data.message);            
-            console.log(e.data);
-            for(let i = 0; i < e.data.buffers.length; i++){
-                this.outBuffer[i] = new Float32Array(e.data.buffers[i]);
-            }
         };
     }
     
@@ -42,17 +35,11 @@ class EuphonyProcessor extends AudioWorkletProcessor {
         const input = inputs[0];
         const output = outputs[0];
 
-        // MONO
-        output[0].set(this.outBuffer[0]);
-        /*
         for (let channel = 0; channel < input.length; ++channel) {
             const inputChannel = input[channel];
             const outputChannel = output[channel];
-            outputChannel.set(this.outBuffer[this.outIndex]);
-        }*/
-
-        if(3 == ++(this.outIndex))
-            this.outIndex = 0;
+            outputChannel.set(inputChannel);
+        }
 
         return true;
     }

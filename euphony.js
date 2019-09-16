@@ -16,19 +16,20 @@
 export var Euphony = (function() {
     function euphony() {
         var about = {
-            VERSION: '0.1.3',
+            VERSION: '0.1.4',
             AUTHOR: "Ji-woong Choi"
         };
 
         this.FFTSIZE = 2048;
         this.BUFFERSIZE = 2048;
+
         this.PI = 3.141592653589793;
         this.PI2 = this.PI * 2;
         this.SAMPLERATE = 44100;
         this.SPAN = 86;
         this.ZEROPOINT = 18000;
 
-        this.context = new AudioContext();
+        this.context = new (window.AudioContext || window.webkitAudioContext)();
         this.isSABAvailable = true;
         this.isAudioWorkletAvailable = Boolean(
             this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
@@ -50,9 +51,21 @@ export var Euphony = (function() {
         this.playBuffer = new Array();
         this.playBufferIdx = 0;
 
+        /*
+        if(this.isAudioWorkletAvailable || this.isSABAvailable) {
+            this.startPointBuffer = new SharedArrayBuffer(this.BUFFERSIZE * 4);
+            this.crossfadeStaticBuffer(this.makeStaticFrequencyBySAB(this.ZEROPOINT - this.SPAN, this.startPointBuffer));
+
+            for (let i = 0; i < 16; i++){
+                this.outBuffer[i] = new SharedArrayBuffer(this.BUFFERSIZE * 4);
+                this.crossfadeStaticBuffer(this.makeStaticFrequencyBySAB(this.ZEROPOINT + i * this.SPAN, this.outBuffer[i]));
+            }
+        } else {*/
         this.startPointBuffer = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT - this.SPAN));
-        for (let i = 0; i < 16; i++)
-            this.outBuffer[i] = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN)); 
+
+        for(let i = 0; i < 16; i++)
+            this.outBuffer[i] = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN));
+//        }
         this.playBufferIdx = 0;
     };
 
@@ -85,6 +98,19 @@ export var Euphony = (function() {
 
 	    T.playBuffer[code.length+1] = T.outBuffer[T.makeChecksum(code)];
             T.playBuffer[code.length+2] = T.outBuffer[T.makeParallelParity(code)];
+
+            let frameIndex = 0;
+            let frameCount = T.BUFFERSIZE * (code.length + 3);
+            T.EuphonyArrayBuffer = T.context.createBuffer(2, frameCount, T.SAMPLERATE);
+            let buffering1 = T.EuphonyArrayBuffer.getChannelData(0);
+            let buffering2 = T.EuphonyArrayBuffer.getChannelData(1);
+
+            for(let i = 0; i < T.playBuffer.length; i++) { // playBuffer's length
+                for(let j = 0; j < T.BUFFERSIZE; j++) {
+                    buffering2[frameIndex] = buffering1[frameIndex] = T.playBuffer[i][j];
+                    frameIndex++;
+                }
+            }
         },
         play: function() {
             let T = this;
@@ -95,44 +121,28 @@ export var Euphony = (function() {
                 */
                 class EuphonyNode extends AudioWorkletNode {
                     constructor(context) {
-                        console.log("created EuphonyAudioWorkletNode");
                         super(context, 'euphony-processor');
                         this.port.onmessage = e => {
                             console.log(e);
                         };
                         this.port.postMessage({
-                            'message': 'created EuphonyNode',
-                            'buffers': T.playBuffer
+                            'message': 'created EuphonyNode'
                         });
                     }
                 }
                 
                 let audioWorklet = T.context.audioWorklet;
                 const source = T.context.createBufferSource();
-
-                const testCode = async(c) => {
-                    await c.audioWorklet.addModule('js/euphony.js/euphony-processor.js');
-                    //let oscillator = new OscillatorNode(T.context);
-                    let euphonyWorkletNode = new EuphonyNode(c);
-                    //source.connect(euphonyWorkletNode);
-                    //euphonyWorkletNode.connect(c.destination);
-                    source.connect(euphonyWorkletNode).connect(c.destination);
-                    source.start();
-                };
-
-                testCode(T.context);
-                /*audioWorklet.addModule('./euphony-processor.mjs').then(() => {
-                    //let oscillator = new OscillatorNode(T.context);
+                source.buffer = T.EuphonyArrayBuffer;
+                source.loop = true;
+                T.context.audioWorklet.addModule('js/euphony.js/euphony-processor.js').then(() => {
                     let euphonyWorkletNode = new EuphonyNode(T.context);
-                    source.connect(euphonyWorkletNode);
-                    euphonyWorkletNode.connect(T.context.destination);
-                    //source.connect(euphonyWorkletNode).connect(T.context.destination);
+                    source.connect(euphonyWorkletNode).connect(T.context.destination);
                     source.start();
-                });*/
+                });
             }
             else
             {
-                console.log(T.playBuffer);
                 T.source = T.context.createBufferSource();
                 T.source.buffer = T.context.createBuffer(2, T.SAMPLERATE*2, T.SAMPLERATE);
                 T.scriptProcessor = T.context.createScriptProcessor(T.FFTSIZE, 0, 2);
@@ -143,9 +153,7 @@ export var Euphony = (function() {
 
                     outputBuf.set(T.playBuffer[T.playBufferIdx]);
                     outputBuf2.set(T.playBuffer[T.playBufferIdx]);
-                    /*for (let i = 0; i < outputBuf.length; i++)
-                        outputBuf[i] = outputBuf2[i] = T.playBuffer[T.playBufferIdx][i];
-                    */
+
                     if(T.playBuffer.length == ++(T.playBufferIdx)) T.playBufferIdx = 0;
                 };
 
@@ -180,17 +188,18 @@ export var Euphony = (function() {
         
         makeStaticFrequency: function(freq){
             let T = this;
-            let buffer = null;
-            let pBuffer = null;
-            if(T.isSABAvailable){
-                buffer = new SharedArrayBuffer(T.BUFFERSIZE * 4);
-                pBuffer = new Float32Array(buffer);
-            }
-            else {
-                buffer = new Float32Array(T.BUFFERSIZE);
-                pBuffer = buffer;
-            }
+            let buffer = new Float32Array(T.BUFFERSIZE);
+            let pBuffer = buffer;
             
+            for (let i = 0; i < T.BUFFERSIZE; i++)
+                pBuffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
+            return buffer;
+        },
+
+        makeStaticFrequencyBySAB: function(freq, buffer) {
+            let T = this;
+            let pBuffer = new Float32Array(buffer);
+                        
             for (let i = 0; i < T.BUFFERSIZE; i++)
                 pBuffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
             return buffer;
