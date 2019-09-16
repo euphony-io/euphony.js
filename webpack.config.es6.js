@@ -17,11 +17,11 @@ module.exports = {
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: '[name].mjs',
+        filename: '[name].m.js',
 	libraryTarget: 'window',
 	globalObject: 'this',
 	libraryExport: 'default',
-	library: 'euphony.js'
+	library: 'Euphony'
     },
     mode: 'production',
     module: {

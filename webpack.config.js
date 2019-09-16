@@ -21,7 +21,7 @@ module.exports = {
 	libraryTarget: 'window',
 	globalObject: 'this',
 	libraryExport: 'default',
-	library: 'euphony.js'
+	library: 'Euphony'
     },
     mode: 'production',
     module: {
