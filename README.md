@@ -7,8 +7,14 @@ Acoustic Data Telecommunication Library. This repository is for Javascript.
 ## Prerequisite
 
 ``` html
-<script type='module' src='https://cdn.jsdelivr.net/gh/designe/euphony.js/dist/euphony.min.mjs'></script>
-<script nomodule src='https://cdn.jsdelivr.net/gh/designe/euphony.js/dist/euphony.min.js'></script>
+<script src='https://cdn.jsdelivr.net/gh/designe/euphony.js/dist/euphony.min.js'></script>
+
+<!-- if you want to use module version of euphony, import this like below.
+<script type='module'>
+    import {Euphony} from "https://cdn.jsdelivr.net/gh/designe/euphony.js/dist/euphony.min.js";
+</script>
+-->
+
 ```
 
 ## Contributing
