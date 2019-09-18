@@ -8,21 +8,20 @@
  *
  **/
 
+
+require('core-js/stable');
+require('regenerator-runtime/runtime');
+
 const path = require('path');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
-    entry: {
-        'euphony.min' : './euphony.js',
-        'euphony-0.1.3.min' : './euphony.js'
-           },
+    entry: //[//"core-js",
+    {'euphony.min' : ['core-js/stable', './euphony.js']},
+//],
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: '[name].js',
 	libraryTarget: 'window',
-	globalObject: 'this',
-	libraryExport: 'default',
-	library: 'euphony.js'
     },
     mode: 'production',
     module: {
@@ -32,17 +31,14 @@ module.exports = {
                 loader: 'babel-loader',
                 options: {
                     presets: [
-                        ['env', {
-                            modules: false,
-                            useBuiltIns: true,
-                            targets: {
-                                browsers: [
-                                    '> 1%',
-                                    'last 2 versions',
-                                    'Firefox ESR',
-                                ],
-                            },
-                        }],
+                        [
+                            '@babel/preset-env',
+                            {
+                                targets:[
+                                    ">0.25%",
+                                    "last 2 versions"]
+                            }
+                        ]
                     ],
                 },
                 exclude: /(node_modules|bower_components)/,
