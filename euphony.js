@@ -51,16 +51,6 @@ export var Euphony = (function() {
         this.playBuffer = new Array();
         this.playBufferIdx = 0;
 
-        /*
-        if(this.isAudioWorkletAvailable || this.isSABAvailable) {
-            this.startPointBuffer = new SharedArrayBuffer(this.BUFFERSIZE * 4);
-            this.crossfadeStaticBuffer(this.makeStaticFrequencyBySAB(this.ZEROPOINT - this.SPAN, this.startPointBuffer));
-
-            for (let i = 0; i < 16; i++){
-                this.outBuffer[i] = new SharedArrayBuffer(this.BUFFERSIZE * 4);
-                this.crossfadeStaticBuffer(this.makeStaticFrequencyBySAB(this.ZEROPOINT + i * this.SPAN, this.outBuffer[i]));
-            }
-        } else {*/
         this.startPointBuffer = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT - this.SPAN));
 
         for(let i = 0; i < 16; i++)
@@ -145,16 +135,17 @@ export var Euphony = (function() {
             {
                 T.source = T.context.createBufferSource();
                 T.source.buffer = T.EuphonyArrayBuffer;
-                T.scriptProcessor = T.context.createScriptProcessor(T.FFTSIZE, 0, 2);
+                console.log(T.EuphonyArrayBuffer.length);
+                T.scriptProcessor = T.context.createScriptProcessor(0, 0, 2);
                 T.scriptProcessor.loop = true;
                 T.scriptProcessor.onaudioprocess = function(e) {
-                    var inputBuf1 = e.inputBuffer.getChannelData(0);
-                    var inputBuf2 = e.inputBuffer.getChannelData(1);
-                    var outputBuf1 = e.outputBuffer.getChannelData(0);
+                    var outputBuf = e.outputBuffer.getChannelData(0);
                     var outputBuf2 = e.outputBuffer.getChannelData(1);
+                    
+                    outputBuf.set(T.playBuffer[T.playBufferIdx]);
+                    outputBuf2.set(T.playBuffer[T.playBufferIdx]);
 
-                    outputBuf1.set(inputBuf1);
-                    outputBuf2.set(inputBuf2);
+                    if(T.playBuffer.length == ++(T.playBufferIdx)) T.playBufferIdx = 0;
                 };
 
                 T.source.connect(T.scriptProcessor);
@@ -167,8 +158,10 @@ export var Euphony = (function() {
             let T = this;
             T.source.stop();
             T.source.onended = e => {
-                T.source.disconnect(T.scriptProcessor);
-                T.scriptProcessor.disconnect(T.context);
+                if(T.scriptProcessor){
+                    T.scriptProcessor.disconnect(T.context);
+                    T.source.disconnect(T.scriptProcessor);
+                }
                 T.playBuffer = new Array();
                 T.playBufferIdx = 0;
             };
