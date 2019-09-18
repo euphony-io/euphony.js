@@ -132,53 +132,41 @@ export var Euphony = (function() {
                 }
                 
                 let audioWorklet = T.context.audioWorklet;
-                const source = T.context.createBufferSource();
-                source.buffer = T.EuphonyArrayBuffer;
-                source.loop = true;
-                T.context.audioWorklet.addModule('js/euphony.js/euphony-processor.js').then(() => {
+                T.source = T.context.createBufferSource();
+                T.source.buffer = T.EuphonyArrayBuffer;
+                T.source.loop = true;
+                T.context.audioWorklet.addModule('https://cdn.jsdelivr.net/gh/designe/euphony.js/euphony-processor.js').then(() => {
                     let euphonyWorkletNode = new EuphonyNode(T.context);
-                    source.connect(euphonyWorkletNode).connect(T.context.destination);
-                    source.start();
+                    T.source.connect(euphonyWorkletNode).connect(T.context.destination);
+                    T.source.start();
                 });
             }
             else
             {
                 T.source = T.context.createBufferSource();
-                T.source.buffer = T.context.createBuffer(2, T.SAMPLERATE*2, T.SAMPLERATE);
+                T.source.buffer = T.EuphonyArrayBuffer;
                 T.scriptProcessor = T.context.createScriptProcessor(T.FFTSIZE, 0, 2);
                 T.scriptProcessor.loop = true;
                 T.scriptProcessor.onaudioprocess = function(e) {
-                    var outputBuf = e.outputBuffer.getChannelData(0);
+                    var inputBuf1 = e.inputBuffer.getChannelData(0);
+                    var inputBuf2 = e.inputBuffer.getChannelData(1);
+                    var outputBuf1 = e.outputBuffer.getChannelData(0);
                     var outputBuf2 = e.outputBuffer.getChannelData(1);
 
-                    outputBuf.set(T.playBuffer[T.playBufferIdx]);
-                    outputBuf2.set(T.playBuffer[T.playBufferIdx]);
-
-                    if(T.playBuffer.length == ++(T.playBufferIdx)) T.playBufferIdx = 0;
+                    outputBuf1.set(inputBuf1);
+                    outputBuf2.set(inputBuf2);
                 };
 
                 T.source.connect(T.scriptProcessor);
                 T.scriptProcessor.connect(T.context.destination);
                 T.source.start();
             }
-            /* scriptProcessor is deprecated. so change it.
-            let ctx = new OfflineAudioContext(2, 1, T.SAMPLERATE);
-            let audioWorklet = ctx.audioWorklet;
-            console.log(audioWorklet);
-            audioWorklet.addModule('/euphony/assets/js/euphony-processor.js').then(() => {
-                let oscillator = new OscillatorNode(ctx);
-                let euphonyWorkletNode = new AudioWorkletNode(ctx, 'euphony-processor');
-
-                oscillator.connect(euphonyWorkletNode).connect(ctx.destination);
-                oscillator.start();
-            });*/
         },
         
         stop: function() {
             let T = this;
             T.source.stop();
             T.source.onended = e => {
-                console.log("be exited");
                 T.source.disconnect(T.scriptProcessor);
                 T.scriptProcessor.disconnect(T.context);
                 T.playBuffer = new Array();
