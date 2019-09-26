@@ -16,7 +16,7 @@
 export var Euphony = (function() {
     function euphony() {
         var about = {
-            VERSION: '0.1.4',
+            VERSION: '0.1.4.5',
             AUTHOR: "Ji-woong Choi"
         };
 
@@ -28,6 +28,7 @@ export var Euphony = (function() {
         this.SAMPLERATE = 44100;
         this.SPAN = 86;
         this.ZEROPOINT = 18000;
+        this.CHANNEL = 1;
 
         this.context = new (window.AudioContext || window.webkitAudioContext)();
         this.isSABAvailable = true;
@@ -91,24 +92,29 @@ export var Euphony = (function() {
 
             let frameIndex = 0;
             let frameCount = T.BUFFERSIZE * (code.length + 3);
-            T.EuphonyArrayBuffer = T.context.createBuffer(2, frameCount, T.SAMPLERATE);
-            let buffering1 = T.EuphonyArrayBuffer.getChannelData(0);
-            let buffering2 = T.EuphonyArrayBuffer.getChannelData(1);
+            T.EuphonyArrayBuffer = T.context.createBuffer(T.CHANNEL, frameCount, T.SAMPLERATE);
 
-            for(let i = 0; i < T.playBuffer.length; i++) { // playBuffer's length
+            let buffering = [];
+            let bufferingIdx = [];
+            for(let i = 0; i < T.CHANNEL; i++){
+                buffering[i] = T.EuphonyArrayBuffer.getChannelData(i);
+                bufferingIdx[i] = 0;
+            }
+            
+            for(let i = 0; i < T.playBuffer.length; i+=T.CHANNEL) { // playBuffer's length
                 for(let j = 0; j < T.BUFFERSIZE; j++) {
-                    buffering2[frameIndex] = buffering1[frameIndex] = T.playBuffer[i][j];
-                    frameIndex++;
+                    for(let c = 0; c < T.CHANNEL; c++) {
+                        if(T.playBuffer[i+c]) buffering[c][bufferingIdx[c]++] = T.playBuffer[i + c][j];
+                    }
                 }
             }
+            console.log(buffering);
         },
         play: function() {
             let T = this;
             /* scriptProcessor is deprecated. so apply to AudioWorklet */
             if(T.isAudioWorkletAvailable) {
-                /*
-                  AudioWorkletNode Declaration
-                */
+                /* AudioWorkletNode Declaration */
                 class EuphonyNode extends AudioWorkletNode {
                     constructor(context) {
                         super(context, 'euphony-processor');
@@ -279,7 +285,15 @@ export var Euphony = (function() {
 	    parity = (parity1&0x1)*8 + (parity2&0x1)*4 + (parity3&0x1)*2 + (parity4&0x1);
 	    console.log("P Parity :: " + parity1 + " " + parity2 + " " + parity3 + " " + parity4 + " = " + parity);
 	    return parity;
-	}
+	},
+
+        setChannel: function(ch) {
+            this.CHANNEL = ch;
+        },
+
+        getChannel: function() {
+            return this.CHANNEL;
+        }
     };
     
     return euphony;
