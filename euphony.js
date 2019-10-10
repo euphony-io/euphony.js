@@ -16,7 +16,7 @@
 export var Euphony = (function() {
     function euphony() {
         var about = {
-            VERSION: '0.1.4.5',
+            VERSION: '0.2',
             AUTHOR: "Ji-woong Choi"
         };
 
@@ -27,7 +27,7 @@ export var Euphony = (function() {
         this.PI2 = this.PI * 2;
         this.SAMPLERATE = 44100;
         this.SPAN = 86;
-        this.ZEROPOINT = 18000;
+        this.ZEROPOINT = 18000; 
         this.CHANNEL = 1;
 
         this.context = new (window.AudioContext || window.webkitAudioContext)();
@@ -35,6 +35,7 @@ export var Euphony = (function() {
         this.isAudioWorkletAvailable = Boolean(
             this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
 
+        this.isPlaying = false;
         /*
           DATE : 190916
           Firefox does not support SharedArrayBuffer due to the spectre set of vulnerabilties.
@@ -54,44 +55,113 @@ export var Euphony = (function() {
 
         this.startPointBuffer = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT - this.SPAN));
 
-        for(let i = 0; i < 16; i++)
+        for(let i = 0; i < 32; i++) {
             this.outBuffer[i] = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN));
-//        }
+        }
         this.playBufferIdx = 0;
+        this.progressIdx = 0;
+        this.cp_index = 0;
+        this.cp_last_theta = 0;
     };
 
     euphony.prototype = {
         setCode: function(data) {
             let T = this;
-            T.playBuffer[0] = T.startPointBuffer;
 
-            var code = "";
-            console.log(data);
+            /* 1) Ss is starting buffer to use trigger point
+               S includes starting buffer with crossfade effect.
+               s is only starting buffer.
+             */
+            let code = "Ss";
+
+            /* 2) Generate pure data code */
+            let data_code = "";
             for (let i = 0; i < data.length; i++)
-                code += data.charCodeAt(i).toString(16);
+                data_code += data.charCodeAt(i).toString(16);
+            code += data_code;
+
+            /* 3) Generate checksum & parity code */
+            code += T.makeChecksum(data_code).toString(16);
+            code += T.makeParallelParity(data_code);
+
+            /* 4) Setting Euphony Code */
+            T.setInnerCode(code);
+            
+            /* 4) copy playBuffer to web audio buffer to use Web Audio API */
+            T.applyAudioBuffer();
+        },
+        /*
+          modulation_types
+          1) FSK (Frequency Shift Keying)
+          2) CPFSK (Continuous Phase Frequency Shift Keying)
+         */
+        setInnerCode: function(code, modulation_type=2) {
+            let T = this;
 
             console.log(code);
             for (let i = 0; i < code.length; i++) {
                 switch (code.charAt(i)) {
-                    case '0': case '1': case '2':
-                    case '3': case '4': case '5':
-                    case '6': case '7': case '8':
-                    case '9':
-                    T.playBuffer[i + 1] = T.outBuffer[code.charCodeAt(i) - '0'.charCodeAt()];
+                case 'S': // Trigger point to begin
+                    switch(modulation_type) {
+                    case 1: // FSK
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
+                        break;
+                    case 2: // CPFSK
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN), 2);
+                        break;
+                    }
                     break;
-                    case 'a': case 'b': case 'f':
-                    case 'c': case 'd': case 'e':
-                    T.playBuffer[i + 1] = T.outBuffer[code.charCodeAt(i) - 'a'.charCodeAt() + 10];
-                    break;    
+                case 's':
+                    switch(modulation_type) {
+                    case 1: // FSK
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
+                        break;
+                    case 2: // CPFSK
+                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN);
+                        break;
+                    }
+                    break;
+                case '0': case '1': case '2':
+                case '3': case '4': case '5':
+                case '6': case '7': case '8':
+                case '9': {
+                    let code_idx = code.charCodeAt(i) - '0'.charCodeAt();
+                    switch(modulation_type) {
+                    case 1: // FSK
+                        T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
+                        break;
+                    case 2: // CPFSK
+                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.ZEROPOINT + code_idx * T.SPAN);
+                        break;
+                    }
+                }
+                    break;
+                case 'a': case 'b': case 'f':
+                case 'c': case 'd': case 'e': {
+                    let code_idx = code.charCodeAt(i) - 'a'.charCodeAt() + 10;
+                    switch(modulation_type) {
+                    case 1:
+                        T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
+                        break;
+                    case 2:
+                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.ZEROPOINT + code_idx * T.SPAN);
+                        break;
+                }
+                    break;
                 }
                 console.log(code.charAt(i));
+                }
             }
 
-	    T.playBuffer[code.length+1] = T.outBuffer[T.makeChecksum(code)];
-            T.playBuffer[code.length+2] = T.outBuffer[T.makeParallelParity(code)];
+            if(modulation_type == 2)
+                T.playBuffer[T.playBufferIdx - 1] = T.crossfadeStaticBuffer(T.playBuffer[T.playBufferIdx -1], 1);
+        },
+        applyAudioBuffer: function() {
+            let T = this;
 
+            console.log(T.playBuffer);
             let frameIndex = 0;
-            let frameCount = T.BUFFERSIZE * (code.length + 3);
+            let frameCount = T.BUFFERSIZE * T.playBufferIdx;
             T.EuphonyArrayBuffer = T.context.createBuffer(T.CHANNEL, frameCount, T.SAMPLERATE);
 
             let buffering = [];
@@ -101,17 +171,18 @@ export var Euphony = (function() {
                 bufferingIdx[i] = 0;
             }
             
-            for(let i = 0; i < T.playBuffer.length; i+=T.CHANNEL) { // playBuffer's length
+            for(let i = 0; i < T.playBuffer.length; i+=T.CHANNEL) {
                 for(let j = 0; j < T.BUFFERSIZE; j++) {
                     for(let c = 0; c < T.CHANNEL; c++) {
                         if(T.playBuffer[i+c]) buffering[c][bufferingIdx[c]++] = T.playBuffer[i + c][j];
                     }
                 }
-            }
-            console.log(buffering);
+            }            
         },
-        play: function() {
+        play: function(isLoop = true) {
             let T = this;
+            if(T.isPlaying)
+                return;
             /* scriptProcessor is deprecated. so apply to AudioWorklet */
             if(T.isAudioWorkletAvailable) {
                 /* AudioWorkletNode Declaration */
@@ -130,11 +201,12 @@ export var Euphony = (function() {
                 let audioWorklet = T.context.audioWorklet;
                 T.source = T.context.createBufferSource();
                 T.source.buffer = T.EuphonyArrayBuffer;
-                T.source.loop = true;
+                T.source.loop = isLoop;
                 T.context.audioWorklet.addModule('https://cdn.jsdelivr.net/gh/designe/euphony.js/euphony-processor.js').then(() => {
                     let euphonyWorkletNode = new EuphonyNode(T.context);
                     T.source.connect(euphonyWorkletNode).connect(T.context.destination);
                     T.source.start();
+                    T.isPlaying = true;
                 });
             }
             else
@@ -143,44 +215,114 @@ export var Euphony = (function() {
                 T.source.buffer = T.EuphonyArrayBuffer;
                 console.log(T.EuphonyArrayBuffer.length);
                 T.scriptProcessor = T.context.createScriptProcessor(0, 0, 2);
-                T.scriptProcessor.loop = true;
+                T.scriptProcessor.loop = isLoop;
                 T.scriptProcessor.onaudioprocess = function(e) {
                     var outputBuf = e.outputBuffer.getChannelData(0);
                     var outputBuf2 = e.outputBuffer.getChannelData(1);
                     
-                    outputBuf.set(T.playBuffer[T.playBufferIdx]);
-                    outputBuf2.set(T.playBuffer[T.playBufferIdx]);
+                    outputBuf.set(T.playBuffer[T.progressIdx]);
+                    outputBuf2.set(T.playBuffer[T.progressIdx]);
 
-                    if(T.playBuffer.length == ++(T.playBufferIdx)) T.playBufferIdx = 0;
+                    if(T.playBuffer.length == ++(T.progressIdx)) T.progressIdx = 0;
                 };
 
                 T.source.connect(T.scriptProcessor);
                 T.scriptProcessor.connect(T.context.destination);
                 T.source.start();
+                T.isPlaying = true;
             }
         },
         
         stop: function() {
             let T = this;
             T.source.stop();
-            T.source.onended = e => {
-                if(T.scriptProcessor){
+            if(T.source.onended){
+                T.source.onended = function(e) {
+                    if(T.scriptProcessor){
+                        T.scriptProcessor.disconnect(T.context);
+                        T.source.disconnect(T.scriptProcessor);
+                    }
+                };
+            } else {
+                /* Firefox does not have an onended callback function */
+                if(T.scriptProcessor) {
                     T.scriptProcessor.disconnect(T.context);
                     T.source.disconnect(T.scriptProcessor);
                 }
-                T.playBuffer = new Array();
-                T.playBufferIdx = 0;
-            };
+            }
+            T.playBuffer = new Array();
+            T.playBufferIdx = 0;
+            T.isPlaying = false;
         },
         
         makeStaticFrequency: function(freq){
             let T = this;
             let buffer = new Float32Array(T.BUFFERSIZE);
-            let pBuffer = buffer;
             
             for (let i = 0; i < T.BUFFERSIZE; i++)
-                pBuffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
+                buffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
             return buffer;
+        },
+
+        /* Continuous Phase Frequency */
+        makeFrequencyByCP: function(freq) {
+            let T = this;
+            let buffer = new Float32Array(T.BUFFERSIZE);
+            let buffer_idx = 0;
+
+            let x = T.PI2 * freq;
+            let i = T.cp_index;
+            let buffer_size = T.cp_index + T.BUFFERSIZE;
+            let theta_diff = x * (T.cp_index / T.SAMPLERATE) - T.cp_last_theta;
+            for (; i < buffer_size; i++) {
+                let theta = x * i / T.SAMPLERATE - theta_diff;
+                buffer[buffer_idx++] = Math.sin(theta);
+            }
+            T.cp_index = i;
+            T.cp_last_theta = x * T.cp_index / T.SAMPLERATE - theta_diff;
+            console.log(T.cp_index);
+            console.log(T.cp_last_theta);
+            
+            return buffer;
+        },
+
+        /* 18000, 18100, 18200, 18300 */
+        makeTestFrequency:function(f1, f2, f3, f4) {
+            let T = this;
+            let pBuffer = new Float32Array(T.BUFFERSIZE);
+
+            let x = 0;
+            let last_x = 0;
+            let offset = T.BUFFERSIZE >> 2;
+            let i = 0;
+            let x_diff = 0;
+            for(; i < offset; i++) {
+                x = T.PI2 * f1 * (i / T.SAMPLERATE);
+                pBuffer[i] = Math.sin(x);
+            }
+            last_x = T.PI2 * f1 * (i / T.SAMPLERATE) - x_diff;
+            x_diff = T.PI2 * f2 * (i / T.SAMPLERATE) - last_x;
+            for(; i < offset*2; i++) {
+                x = T.PI2 * f2 * (i / T.SAMPLERATE) - x_diff;//last_x;
+                pBuffer[i] = Math.sin(x);
+            }
+            last_x = T.PI2 * f2 * (i / T.SAMPLERATE) - x_diff;
+            x_diff = T.PI2 * f3 * (i / T.SAMPLERATE) - last_x;
+            for(; i < offset*3; i++) {
+                x = T.PI2 * f3 * (i / T.SAMPLERATE) - x_diff;
+                pBuffer[i] = Math.sin(x);
+            }
+            last_x = T.PI2 * f3 * (i / T.SAMPLERATE) - x_diff;
+            x_diff = T.PI2 * f4 * (i / T.SAMPLERATE) - last_x;
+            for(; i < offset*4; i++) {
+                x = T.PI2 * f4 * (i / T.SAMPLERATE) - x_diff;
+                pBuffer[i] = Math.sin(x);
+            }
+
+            pBuffer = T.crossfadeStaticBuffer(pBuffer, 3);
+
+            T.playBuffer[T.playBufferIdx++] = pBuffer;
+            return pBuffer;
         },
 
         makeStaticFrequencyBySAB: function(freq, buffer) {
@@ -191,8 +333,11 @@ export var Euphony = (function() {
                 pBuffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
             return buffer;
         },
-        
-        crossfadeStaticBuffer: function(buffer) {
+
+        /* 
+           cf_type = 1(01), 2(10), 3(11)
+         */
+        crossfadeStaticBuffer: function(buffer, cf_type = 2) {
             let T = this;
             var mini_window,
                 fade_section = T.BUFFERSIZE / 8;
@@ -205,12 +350,21 @@ export var Euphony = (function() {
 
             for (let i = 0; i < fade_section; i++) {
                 mini_window = i / fade_section;
-                pBuffer[i] *= mini_window;
-                pBuffer[T.BUFFERSIZE - 1 - i] *= mini_window;
+                switch(cf_type) {
+                case 1:
+                    pBuffer[T.BUFFERSIZE - 1 - i] *= mini_window;
+                    break;
+                case 2:
+                    pBuffer[i] *= mini_window;                    
+                    break;
+                case 3:
+                    pBuffer[i] *= mini_window;
+                    pBuffer[T.BUFFERSIZE - 1 - i] *= mini_window;
+                    break;
+                }
             }
             return buffer;
         },
-        
         mixRawData: function() {
             let T = this;
             for (let i = 0, n = arguments.length; i < n; i++) {
@@ -288,11 +442,27 @@ export var Euphony = (function() {
 	},
 
         setChannel: function(ch) {
+            /* 1 and 2 channels are only available now. */
+            if(ch > 2) ch = 2;
             this.CHANNEL = ch;
         },
 
         getChannel: function() {
             return this.CHANNEL;
+        },
+
+        getOutBuffer: function(outBufferIdx) {
+            let T = this;
+            if(T.CHANNEL == 2) {
+                if(T.playBufferIdx & 1) {
+                    return T.outBuffer[outBufferIdx];
+                } else {
+                    return T.outBuffer[outBufferIdx + 16];
+                }
+            } else {
+                return T.outBuffer[outBufferIdx];
+            }
+            
         }
     };
     
