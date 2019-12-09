@@ -1,8 +1,8 @@
-const expect = require('chai').expect;
+var expect = chai.expect;
 
-const myEuphony = require('../euphony.js');
 
-describe('MY EUPHONY TEST', function () {
+describe('#MY_EUPHONY_TEST', function () {
+    let euphy = new Euphony();
     it('Channel Setting', function () {
         let euphy = new myEuphony();
         euphy.setChannel(1);

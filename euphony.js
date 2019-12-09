@@ -500,7 +500,7 @@ export var Euphony = (function() {
 	},
 
         setChannel: function(ch) {
-            /* 1 and 2 channels are only available now. */
+            /* 1 and 2 channel are only available now. */
             if(ch > 2) ch = 2;
             this.CHANNEL = ch;
         },
