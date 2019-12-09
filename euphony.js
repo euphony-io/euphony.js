@@ -521,7 +521,7 @@ export var Euphony = (function() {
         setBaseFrequency: function(freq) {
             this.BASE_FREQUENCY = freq;
             this.initBuffers();
-        }
+        },
 
         getOutBuffer: function(outBufferIdx) {
             let T = this;
