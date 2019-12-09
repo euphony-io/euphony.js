@@ -16,7 +16,7 @@
 export var Euphony = (function() {
     function euphony() {
         var about = {
-            VERSION: '0.2',
+            VERSION: '0.2.1',
             AUTHOR: "Ji-woong Choi"
         };
 
@@ -29,6 +29,7 @@ export var Euphony = (function() {
         this.SPAN = 86;
         this.ZEROPOINT = 18000; 
         this.CHANNEL = 1;
+        this.setModulation("CPFSK");
 
         this.context = new (window.AudioContext || window.webkitAudioContext)();
         this.isSABAvailable = true;
@@ -54,7 +55,11 @@ export var Euphony = (function() {
         this.playBufferIdx = 0;
 
         this.startPointBuffer = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT - this.SPAN));
-
+        this.zeroBuffer = this.makeZeroSource();
+        /*
+          CHANNEL 1 : 0 ~ 16
+          CHANNEL 2 : 17 ~ 32
+         */
         for(let i = 0; i < 32; i++) {
             this.outBuffer[i] = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN));
         }
@@ -91,70 +96,115 @@ export var Euphony = (function() {
             T.applyAudioBuffer();
         },
         /*
-          modulation_types
-          1) FSK (Frequency Shift Keying)
-          2) CPFSK (Continuous Phase Frequency Shift Keying)
+          Function Name :setInnerCode
+          Description : Code Interpreter
          */
-        setInnerCode: function(code, modulation_type=2) {
+        setInnerCode: function(code) {
             let T = this;
 
             console.log(code);
-            for (let i = 0; i < code.length; i++) {
-                switch (code.charAt(i)) {
-                case 'S': // Trigger point to begin
-                    switch(modulation_type) {
-                    case 1: // FSK
-                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
-                        break;
-                    case 2: // CPFSK
+            switch(T.MODULATION_TYPE) {
+            case 0: // ASK
+                for(let i = 0; i < code.length; i++) {
+                    let c = code[i];
+                    switch(c) {
+                        /* STARTING PART */
+                    case 'S':
                         T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN), 2);
                         break;
-                    }
-                    break;
-                case 's':
-                    switch(modulation_type) {
-                    case 1: // FSK
-                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
-                        break;
-                    case 2: // CPFSK
+                    case 's':
                         T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN);
                         break;
+                        /* DATA CODE PART */
+                    case '0': case '1': case '2':
+                    case '3': case '4': case '5':
+                    case '6': case '7': case '8':
+                    case '9': case 'a': case 'b':
+                    case 'c': case 'd': case 'e':
+                    case 'f': {
+                        let code_idx = parseInt(c, 16);
+                        // change hexa to binary
+                        let code_idx_binary = code_idx.toString(2);
+                        for(let ci = 0; ci < code_idx_binary.length; ci++) {
+                            T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx_binary - '0');
+                        }
                     }
-                    break;
-                case '0': case '1': case '2':
-                case '3': case '4': case '5':
-                case '6': case '7': case '8':
-                case '9': {
-                    let code_idx = code.charCodeAt(i) - '0'.charCodeAt();
-                    switch(modulation_type) {
-                    case 1: // FSK
-                        T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
-                        break;
-                    case 2: // CPFSK
-                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.ZEROPOINT + code_idx * T.SPAN);
                         break;
                     }
                 }
-                    break;
-                case 'a': case 'b': case 'f':
-                case 'c': case 'd': case 'e': {
-                    let code_idx = code.charCodeAt(i) - 'a'.charCodeAt() + 10;
-                    switch(modulation_type) {
-                    case 1:
+                break;
+            case 1: // FSK
+                for(let i = 0; i < code.length; i++) {
+                    let c = code[i];
+                    switch(c) {
+                        /* STARTING PART */
+                    case 'S':
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN), 2);
+                        break;
+                    case 's':
+                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN);
+                        break;
+                        /* DATA CODE PART */
+                    case '0': case '1': case '2':
+                    case '3': case '4': case '5':
+                    case '6': case '7': case '8':
+                    case '9': case 'a': case 'b':
+                    case 'c': case 'd': case 'e':
+                    case 'f': {
+                        let code_idx = parseInt(c, 16);
                         T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
+                    }
                         break;
-                    case 2:
-                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.ZEROPOINT + code_idx * T.SPAN);
+                    }
+                }
+                break;
+            case 2: // CPFSK
+                for(let i = 0; i < code.length; i++) {
+                    let c = code[i];
+                    switch(c) {
+                        /* STARTING PART */
+                    case 'S': case 's': 
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
                         break;
+                        /* DATA CODE PART */
+                    case '0': case '1': case '2':
+                    case '3': case '4': case '5':
+                    case '6': case '7': case '8':
+                    case '9': case 'a': case 'b':
+                    case 'c': case 'd': case 'e':
+                    case 'f': {
+                        let code_idx = parseInt(c, 16);
+                        T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
+                    }
+                        break;
+                    }
                 }
-                    break;
-                }
-                console.log(code.charAt(i));
-                }
-            }
-
-            if(modulation_type == 2)
+                break;
+                // fade out
                 T.playBuffer[T.playBufferIdx - 1] = T.crossfadeStaticBuffer(T.playBuffer[T.playBufferIdx -1], 1);
+            }
+        },
+        /*
+          modulation_types
+          0) ASK (Amplitude Shift Keying)
+          1) FSK (Frequency Shift Keying)
+          2) CPFSK (Continuous Phase Frequency Shift Keying)
+        */
+        setModulation: function(mode) {
+            let T = this;
+
+            switch(mode) {
+            case "ASK": case "ask":
+                T.MODULATION_TYPE = 0;
+                break;
+            case "FSK": case "fsk":
+                T.MODULATION_TYPE = 1;
+                break;
+            case "CPFSK": case "cpfsk":
+            default: // if abnormal mode is inserted, default type is CPFSK.
+                T.MODULATION_TYPE = 2;
+                break;
+            }
         },
         applyAudioBuffer: function() {
             let T = this;
@@ -177,7 +227,7 @@ export var Euphony = (function() {
                         if(T.playBuffer[i+c]) buffering[c][bufferingIdx[c]++] = T.playBuffer[i + c][j];
                     }
                 }
-            }            
+            }
         },
         play: function(isLoop = true) {
             let T = this;
@@ -253,6 +303,16 @@ export var Euphony = (function() {
             T.playBuffer = new Array();
             T.playBufferIdx = 0;
             T.isPlaying = false;
+        },
+
+        makeZeroSource: function() {
+            let T = this;
+            let buffer = new Float32Array(T.BUFFERSIZE);
+
+            for(let i = 0; i < T.BUFFERSIZE; i++)
+                buffer[i] = 0;
+
+            return buffer;
         },
         
         makeStaticFrequency: function(freq){
@@ -451,18 +511,55 @@ export var Euphony = (function() {
             return this.CHANNEL;
         },
 
+        setBufferSize: function(size) {
+            this.BUFFERSIZE = size;
+        },
+
+        getBufferSize: function() {
+            return this.BUFFERSIZE;
+        },
+
         getOutBuffer: function(outBufferIdx) {
             let T = this;
-            if(T.CHANNEL == 2) {
-                if(T.playBufferIdx & 1) {
-                    return T.outBuffer[outBufferIdx];
-                } else {
-                    return T.outBuffer[outBufferIdx + 16];
+            switch(T.MODULATION_TYPE) {
+            case 0: // ASK
+                switch(T.CHANNEL) {
+                case 1:
+                default:
+                    return (outBufferIdx == 1) ? T.outBuffer[0] : T.zeroBuffer;
+                case 2:
+                    if(T.playBufferIdx & 1) {
+                        return (outBufferIdx == 1) ? T.outBuffer[0] : T.zeroBuffer;
+                    } else {
+                        return (outBufferIdx == 1) ? T.outBuffer[16] : T.zeroBuffer;
+                    }
                 }
-            } else {
-                return T.outBuffer[outBufferIdx];
+                break;
+            case 1: // FSK
+                switch(T.CHANNEL) {
+                case 1:
+                default:
+                    return T.outBuffer[outBufferIdx];
+                case 2:
+                    if(T.playBufferIdx & 1) {
+                        return T.outBuffer[outBufferIdx];
+                    } else {
+                        return T.outBuffer[outBufferIdx + 16];
+                    }
+                }
+                break;
+            case 2: // CPFSK
+                switch(T.CHANNEL) {
+                case 1:
+                case 2: // Channel of CPFSK Modulation is not supported yet.
+                    /*
+                      TODO: CPFSK's multi channel concept.
+                     */
+                default:
+                    return T.makeFrequencyByCP(T.ZEROPOINT + outBufferIdx * T.SPAN);
+                }
+                break;                
             }
-            
         }
     };
     
