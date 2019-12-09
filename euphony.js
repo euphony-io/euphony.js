@@ -25,7 +25,7 @@ export var Euphony = (function() {
         this.PI2 = this.PI * 2;
         this.SAMPLERATE = 44100;
         this.SPAN = 86;
-        this.ZEROPOINT = 18000; 
+        this.BASE_FREQUENCY = 18000; 
         this.CHANNEL = 1;
         this.setModulation("CPFSK");
 
@@ -59,14 +59,14 @@ export var Euphony = (function() {
             T.playBuffer = new Array();
             T.playBufferIdx = 0;
 
-            T.startPointBuffer = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN));
+            T.startPointBuffer = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN));
             T.zeroBuffer = T.makeZeroSource();
             /*
               CHANNEL 1 : 0 ~ 16
               CHANNEL 2 : 17 ~ 32
             */
             for(let i = 0; i < 32; i++) {
-                T.outBuffer[i] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT + i * T.SPAN));
+                T.outBuffer[i] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY + i * T.SPAN));
             }
             T.playBufferIdx = 0;
             T.progressIdx = 0;
@@ -114,7 +114,7 @@ export var Euphony = (function() {
                         /* STARTING PART */
                     case 'S':
                     case 's':
-                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN), 3);
                         break;
                         /* DATA CODE PART */
                     case '0': case '1': case '2':
@@ -140,7 +140,7 @@ export var Euphony = (function() {
                     switch(c) {
                         /* STARTING PART */
                     case 'S': case 's': 
-                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN), 3);
                         break;
                         /* DATA CODE PART */
                     case '0': case '1': case '2':
@@ -162,10 +162,10 @@ export var Euphony = (function() {
                     switch(c) {
                         /* STARTING PART */
                     case 'S':
-                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN), 2);
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeFrequencyByCP(T.BASE_FREQUENCY - T.SPAN), 2);
                         break;
                     case 's':
-                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN);
+                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.BASE_FREQUENCY - T.SPAN);
                         break;
                         /* DATA CODE PART */
                     case '0': case '1': case '2':
@@ -518,6 +518,11 @@ export var Euphony = (function() {
             return this.BUFFERSIZE;
         },
 
+        setBaseFrequency: function(freq) {
+            this.BASE_FREQUENCY = freq;
+            this.initBuffers();
+        }
+
         getOutBuffer: function(outBufferIdx) {
             let T = this;
             switch(T.MODULATION_TYPE) {
@@ -555,7 +560,7 @@ export var Euphony = (function() {
                       TODO: CPFSK's multi channel concept.
                      */
                 default:
-                    return T.makeFrequencyByCP(T.ZEROPOINT + outBufferIdx * T.SPAN);
+                    return T.makeFrequencyByCP(T.BASE_FREQUENCY + outBufferIdx * T.SPAN);
                 }
                 break;                
             }
