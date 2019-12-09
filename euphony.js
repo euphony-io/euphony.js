@@ -398,7 +398,7 @@ export var Euphony = (function() {
         /* 
            cf_type = 1(01), 2(10), 3(11)
          */
-        crossfadeStaticBuffer: function(buffer, cf_type = 2) {
+        crossfadeStaticBuffer: function(buffer, cf_type = 3) {
             let T = this;
             var mini_window,
                 fade_section = T.BUFFERSIZE / 8;
