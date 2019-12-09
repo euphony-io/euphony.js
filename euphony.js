@@ -19,8 +19,6 @@ export var Euphony = (function() {
             VERSION: '0.2.1',
             AUTHOR: "Ji-woong Choi"
         };
-
-        this.FFTSIZE = 2048;
         this.BUFFERSIZE = 2048;
 
         this.PI = 3.141592653589793;
@@ -48,28 +46,33 @@ export var Euphony = (function() {
             this.isAudioWorkletAvailable = false;
             this.isSABAvailable = false;
         }
-        
-        this.scriptProcessor = null;
-        this.outBuffer = new Array();
-        this.playBuffer = new Array();
-        this.playBufferIdx = 0;
 
-        this.startPointBuffer = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT - this.SPAN));
-        this.zeroBuffer = this.makeZeroSource();
-        /*
-          CHANNEL 1 : 0 ~ 16
-          CHANNEL 2 : 17 ~ 32
-         */
-        for(let i = 0; i < 32; i++) {
-            this.outBuffer[i] = this.crossfadeStaticBuffer(this.makeStaticFrequency(this.ZEROPOINT + i * this.SPAN));
-        }
-        this.playBufferIdx = 0;
-        this.progressIdx = 0;
-        this.cp_index = 0;
-        this.cp_last_theta = 0;
+        this.initBuffers();
     };
 
     euphony.prototype = {
+        initBuffers: function() {
+            let T = this;
+
+            T.scriptProcessor = null;
+            T.outBuffer = new Array();
+            T.playBuffer = new Array();
+            T.playBufferIdx = 0;
+
+            T.startPointBuffer = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN));
+            T.zeroBuffer = T.makeZeroSource();
+            /*
+              CHANNEL 1 : 0 ~ 16
+              CHANNEL 2 : 17 ~ 32
+            */
+            for(let i = 0; i < 32; i++) {
+                T.outBuffer[i] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT + i * T.SPAN));
+            }
+            T.playBufferIdx = 0;
+            T.progressIdx = 0;
+            T.cp_index = 0;
+            T.cp_last_theta = 0;
+        },
         setCode: function(data) {
             let T = this;
 
@@ -110,10 +113,8 @@ export var Euphony = (function() {
                     switch(c) {
                         /* STARTING PART */
                     case 'S':
-                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN), 2);
-                        break;
                     case 's':
-                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.ZEROPOINT - T.SPAN);
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
                         break;
                         /* DATA CODE PART */
                     case '0': case '1': case '2':
@@ -126,7 +127,7 @@ export var Euphony = (function() {
                         // change hexa to binary
                         let code_idx_binary = code_idx.toString(2);
                         for(let ci = 0; ci < code_idx_binary.length; ci++) {
-                            T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx_binary - '0');
+                            T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx_binary[ci] - '0');
                         }
                     }
                         break;
@@ -134,6 +135,28 @@ export var Euphony = (function() {
                 }
                 break;
             case 1: // FSK
+                for(let i = 0; i < code.length; i++) {
+                    let c = code[i];
+                    switch(c) {
+                        /* STARTING PART */
+                    case 'S': case 's': 
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
+                        break;
+                        /* DATA CODE PART */
+                    case '0': case '1': case '2':
+                    case '3': case '4': case '5':
+                    case '6': case '7': case '8':
+                    case '9': case 'a': case 'b':
+                    case 'c': case 'd': case 'e':
+                    case 'f': {
+                        let code_idx = parseInt(c, 16);
+                        T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
+                    }
+                        break;
+                    }
+                }
+                break;
+            case 2: // CPFSK
                 for(let i = 0; i < code.length; i++) {
                     let c = code[i];
                     switch(c) {
@@ -157,31 +180,9 @@ export var Euphony = (function() {
                         break;
                     }
                 }
-                break;
-            case 2: // CPFSK
-                for(let i = 0; i < code.length; i++) {
-                    let c = code[i];
-                    switch(c) {
-                        /* STARTING PART */
-                    case 'S': case 's': 
-                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.ZEROPOINT - T.SPAN), 3);
-                        break;
-                        /* DATA CODE PART */
-                    case '0': case '1': case '2':
-                    case '3': case '4': case '5':
-                    case '6': case '7': case '8':
-                    case '9': case 'a': case 'b':
-                    case 'c': case 'd': case 'e':
-                    case 'f': {
-                        let code_idx = parseInt(c, 16);
-                        T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
-                    }
-                        break;
-                    }
-                }
-                break;
                 // fade out
                 T.playBuffer[T.playBufferIdx - 1] = T.crossfadeStaticBuffer(T.playBuffer[T.playBufferIdx -1], 1);
+                break;
             }
         },
         /*
@@ -513,6 +514,7 @@ export var Euphony = (function() {
 
         setBufferSize: function(size) {
             this.BUFFERSIZE = size;
+            this.initBuffers();
         },
 
         getBufferSize: function() {
