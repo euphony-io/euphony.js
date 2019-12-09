@@ -11,12 +11,12 @@
 
     <script src="https://unpkg.com/chai/chai.js"></script>
     <script src="https://unpkg.com/mocha/mocha.js"></script>
-    <script src="../euphony.js"></script>
-
+    <script src="../dist/euphony.min.js"></script>
     <script class="mocha-init">
       mocha.setup('bdd');
       mocha.checkLeaks();
     </script>
+
     <script src="test.euphony.js"></script>
     <script class="mocha-exec">
       mocha.run();
