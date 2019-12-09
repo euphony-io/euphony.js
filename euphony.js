@@ -251,7 +251,7 @@ export var Euphony = (function() {
                 
                 let audioWorklet = T.context.audioWorklet;
                 T.source = T.context.createBufferSource();
-                T.source.buffer = T.EuphonyArrayBuffer;
+                T.source.buffer = T.context.createBuffer(2, T.SAMPLERATE*2, T.SAMPLERATE);//T.EuphonyArrayBuffer;
                 T.source.loop = isLoop;
                 T.context.audioWorklet.addModule('https://cdn.jsdelivr.net/gh/designe/euphony.js/euphony-processor.js').then(() => {
                     let euphonyWorkletNode = new EuphonyNode(T.context);
@@ -264,8 +264,7 @@ export var Euphony = (function() {
             {
                 T.source = T.context.createBufferSource();
                 T.source.buffer = T.EuphonyArrayBuffer;
-                console.log(T.EuphonyArrayBuffer.length);
-                T.scriptProcessor = T.context.createScriptProcessor(0, 0, 2);
+                T.scriptProcessor = T.context.createScriptProcessor(T.BUFFERSIZE, 0, 2);
                 T.scriptProcessor.loop = isLoop;
                 T.scriptProcessor.onaudioprocess = function(e) {
                     var outputBuf = e.outputBuffer.getChannelData(0);
@@ -341,8 +340,6 @@ export var Euphony = (function() {
             }
             T.cp_index = i;
             T.cp_last_theta = x * T.cp_index / T.SAMPLERATE - theta_diff;
-            console.log(T.cp_index);
-            console.log(T.cp_last_theta);
             
             return buffer;
         },
