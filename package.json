@@ -1,6 +1,6 @@
 {
   "name": "euphony.js",
-  "version": "v0.2.0",
+  "version": "v0.2.1",
   "description": "Sound Communication Library",
   "main": "./euphony.js",
   "keywords": [
@@ -13,7 +13,7 @@
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "dev": "webpack-dev-server",
-    "es6": "terser --compress --mangle -- euphony.js >> ./dist/euphony.m.min.js"
+    "es6": "terser --compress --mangle -- euphony.js > ./dist/euphony.m.min.js"
   },
   "dependencies": {
     "@babel/core": "^7.6.0",
