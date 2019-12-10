@@ -7,7 +7,7 @@ Acoustic Data Telecommunication Library. This repository is for Javascript.
 ## Prerequisite
 
 ``` html
-<script src='https://cdn.jsdelivr.net/gh/designe/euphony.js/dist/euphony.min.js'></script>
+<script src='https://cdn.jsdelivr.net/gh/designe/euphony.js/dist/euphony.m.min.js'></script>
 
 <!-- if you want to use module version of euphony, import this like below.
 <script type='module'>
@@ -15,6 +15,16 @@ Acoustic Data Telecommunication Library. This repository is for Javascript.
 </script>
 -->
 
+```
+
+## Usage
+```javascript
+var euphony = new Euphony();
+euphony.setCode("hello, euphony");
+euphony.play();
+
+// if you want to stop sound
+euphony.stop();
 ```
 
 ## Contributing
