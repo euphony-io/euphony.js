@@ -98,6 +98,11 @@ export var Euphony = (function() {
             /* 4) copy playBuffer to web audio buffer to use Web Audio API */
             T.applyAudioBuffer();
         },
+        setFrequency: function(freq) {
+            let T = this;
+            T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(freq), 3);
+            T.applyAudioBuffer();
+        },
         /*
           Function Name :setInnerCode
           Description : Code Interpreter
