@@ -318,7 +318,8 @@ export var Euphony = (function () {
     stop: function () {
       const T = this
       T.source.stop()
-      if (typeof T.source.onended === 'undefiend') {
+      if (T.source.onended) { }
+      else {
         /* Firefox does not have an onended callback function */
         if (T.scriptProcessor) {
           T.scriptProcessor.disconnect(T.context)
@@ -519,7 +520,9 @@ export var Euphony = (function () {
 
     setChannel: function (ch) {
       /* 1 and 2 channel are only available now. */
-      if (ch > 2) ch = 2
+      if (ch > 2) {
+        ch = 2
+      }
       this.CHANNEL = ch
     },
 
