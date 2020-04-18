@@ -19,6 +19,7 @@ export var Euphony = (function () {
       VERSION: '0.2.2',
       AUTHOR: 'Ji-woong Choi'
     }
+    
     this.BUFFERSIZE = 2048
 
     this.PI = 3.141592653589793
@@ -34,6 +35,7 @@ export var Euphony = (function () {
     this.isAudioWorkletAvailable = Boolean(
       this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function')
 
+    this.STATE = 0
     this.isPlaying = false
     /*
           DATE : 190916
@@ -211,6 +213,24 @@ export var Euphony = (function () {
           break
       }
     },
+
+    setState: function (state) {
+        const T = this
+        switch (state) {
+            case 1:
+            case "PLAYING":
+                T.STATE = 1
+                break
+            case 0:
+            case "STOP":
+                break
+        }
+    },
+
+    getState: function() {
+        return this.STATE;
+    },
+
     applyAudioBuffer: function () {
       const T = this
 
@@ -236,6 +256,17 @@ export var Euphony = (function () {
     play: function (isLoop = true) {
       const T = this
       if (T.isPlaying) { return }
+
+      T.source = T.context.createBufferSource()
+      if(T.source.onended) {
+        T.source.onended = function (e) {
+            if (T.scriptProcessor) {
+                T.scriptProcessor.disconnect(T.context)
+                T.source.disconnect(T.scriptProcessor)
+            }
+        }
+      }
+
       /* scriptProcessor is deprecated. so apply to AudioWorklet */
       if (T.isAudioWorkletAvailable) {
         /* AudioWorkletNode Declaration */
@@ -252,7 +283,6 @@ export var Euphony = (function () {
         }
 
         const audioWorklet = T.context.audioWorklet
-        T.source = T.context.createBufferSource()
         T.source.buffer = T.EuphonyArrayBuffer
         T.source.loop = isLoop
         T.context.audioWorklet.addModule('https://cdn.jsdelivr.net/gh/designe/euphony.js/euphony-processor.js').then(() => {
@@ -260,6 +290,7 @@ export var Euphony = (function () {
           T.source.connect(euphonyWorkletNode).connect(T.context.destination)
           T.source.start()
           T.isPlaying = true
+          T.setState("PLAYING")
         })
       } else {
         T.source = T.context.createBufferSource()
@@ -280,20 +311,14 @@ export var Euphony = (function () {
         T.scriptProcessor.connect(T.context.destination)
         T.source.start()
         T.isPlaying = true
+        T.setState("PLAYING")
       }
     },
 
     stop: function () {
       const T = this
       T.source.stop()
-      if (T.source.onended) {
-        T.source.onended = function (e) {
-          if (T.scriptProcessor) {
-            T.scriptProcessor.disconnect(T.context)
-            T.source.disconnect(T.scriptProcessor)
-          }
-        }
-      } else {
+      if (typeof T.source.onended === 'undefiend') {
         /* Firefox does not have an onended callback function */
         if (T.scriptProcessor) {
           T.scriptProcessor.disconnect(T.context)
@@ -303,6 +328,7 @@ export var Euphony = (function () {
       T.playBuffer = new Array()
       T.playBufferIdx = 0
       T.isPlaying = false
+      T.setState("STOP")
     },
 
     makeZeroSource: function () {
@@ -516,7 +542,7 @@ export var Euphony = (function () {
     },
 
     getPlayBuffer: function() {
-        return this.playBuffer;
+        return this.playBuffer
     },
 
     getOutBuffer: function (outBufferIdx) {
