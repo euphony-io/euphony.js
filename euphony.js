@@ -223,8 +223,10 @@ export var Euphony = (function () {
                 break
             case 0:
             case "STOP":
+                T.STATE = 0
                 break
         }
+        console.log("setState() :: " + state)
     },
 
     getState: function() {
@@ -293,7 +295,6 @@ export var Euphony = (function () {
           T.setState("PLAYING")
         })
       } else {
-        T.source = T.context.createBufferSource()
         T.source.buffer = T.context.createBuffer(2, T.SAMPLERATE * 2, T.SAMPLERATE)
         T.scriptProcessor = T.context.createScriptProcessor(T.BUFFERSIZE, 0, 2)
         T.scriptProcessor.loop = isLoop
