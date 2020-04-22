@@ -70,7 +70,7 @@ export var Euphony = (function () {
       for (let i = 0; i < 32; i++) {
         T.outBuffer[i] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY + i * T.SPAN))
       }
-      T.playBufferIdx = 0
+      
       T.progressIdx = 0
       T.cp_index = 0
       T.cp_last_theta = 0
@@ -100,7 +100,13 @@ export var Euphony = (function () {
       T.applyAudioBuffer()
     },
 
-    setFrequency: function (freq) {
+    setFrequency: function(freq) {
+      const T = this
+      T.playBufferIdx = 0
+      T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(freq), 3)
+    },
+
+    addFrequency: function (freq) {
       const T = this
       T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(freq), 3)
     },
@@ -118,8 +124,7 @@ export var Euphony = (function () {
             const c = code[i]
             switch (c) {
               /* STARTING PART */
-              case 'S':
-              case 's':
+              case 'S': case 's':
                 T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN), 3)
                 break
                 /* DATA CODE PART */
@@ -217,14 +222,18 @@ export var Euphony = (function () {
     setState: function (state) {
         const T = this
         switch (state) {
-            case 1:
-            case "PLAYING":
-                T.STATE = 1
-                break
-            case 0:
-            case "STOP":
-                T.STATE = 0
-                break
+          case 2:
+          case "PAUSE":
+            T.STATE = 2
+            break
+          case 1:
+          case "PLAYING":
+            T.STATE = 1
+            break
+          case 0:
+          case "STOP":
+            T.STATE = 0
+            break
         }
         console.log("setState() :: " + state)
     },
@@ -235,6 +244,14 @@ export var Euphony = (function () {
 
     applyAudioBuffer: function () {
       const T = this
+
+      /*
+      Error Check
+      */
+      if(T.playBufferIdx == 0) {
+        console.log("Euphony Error : playBuffer was not defined")
+        return -1
+      }
 
       console.log(T.playBuffer)
       const frameCount = T.BUFFERSIZE * T.playBufferIdx
@@ -255,19 +272,20 @@ export var Euphony = (function () {
         }
       }
     },
+
     play: function (isLoop = true) {
       const T = this
-      if (T.isPlaying) { return }
+      
+      switch(T.getState()) {
+        case 1: // PLAY
+          return
+        case 2: // PAUSE
+          this.setState("PLAYING")
+          T.context.resume()
+          return
+      }
 
       T.source = T.context.createBufferSource()
-      if(T.source.onended) {
-        T.source.onended = function (e) {
-            if (T.scriptProcessor) {
-                T.scriptProcessor.disconnect(T.context)
-                T.source.disconnect(T.scriptProcessor)
-            }
-        }
-      }
 
       /* scriptProcessor is deprecated. so apply to AudioWorklet */
       if (T.isAudioWorkletAvailable) {
@@ -316,12 +334,27 @@ export var Euphony = (function () {
       }
     },
 
+    pause: function () {
+      const T = this
+      //T.source.stop()
+      T.context.suspend()
+      T.isPlaying = false
+      T.setState("PAUSE")
+    },
+
     stop: function () {
       const T = this
       T.source.stop()
-      if (T.source.onended) { }
+      if (T.source.onended) { 
+        T.source.onended = function (e) {
+          if (T.scriptProcessor) {
+            T.scriptProcessor.disconnect(T.context)
+            T.source.disconnect(T.scriptProcessor)
+          }
+        }
+      }
       else {
-        /* Firefox does not have an onended callback function */
+        /* Some other browser might not have an onended callback function */
         if (T.scriptProcessor) {
           T.scriptProcessor.disconnect(T.context)
           T.source.disconnect(T.scriptProcessor)
