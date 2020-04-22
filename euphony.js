@@ -285,6 +285,7 @@ export var Euphony = (function () {
           return
       }
 
+      T.gainNode = T.context.createGain()
       T.source = T.context.createBufferSource()
 
       /* scriptProcessor is deprecated. so apply to AudioWorklet */
@@ -307,7 +308,7 @@ export var Euphony = (function () {
         T.source.loop = isLoop
         T.context.audioWorklet.addModule('https://cdn.jsdelivr.net/gh/designe/euphony.js/euphony-processor.js').then(() => {
           const euphonyWorkletNode = new EuphonyNode(T.context)
-          T.source.connect(euphonyWorkletNode).connect(T.context.destination)
+          T.source.connect(euphonyWorkletNode).connect(T.gainNode).connect(T.context.destination)
           T.source.start()
           T.isPlaying = true
           T.setState("PLAYING")
@@ -327,7 +328,8 @@ export var Euphony = (function () {
         }
 
         T.source.connect(T.scriptProcessor)
-        T.scriptProcessor.connect(T.context.destination)
+        T.scriptProcessor.connect(T.gainNode)
+        T.gainNode.connect(T.context.destination)
         T.source.start()
         T.isPlaying = true
         T.setState("PLAYING")
@@ -485,6 +487,20 @@ export var Euphony = (function () {
         for (var j = 0; j < T.BUFFERSIZE; j++) {
           T.outBuffer[j] = (T.outBuffer[j] + t_buffer[j]) / 2
         }
+      }
+    },
+
+    /*
+    args : volume 0 - 100
+    */
+    setVolume: function(volume) {
+      console.log("Euphony :: setVolume :: " + volume)
+      const T = this
+      let fraction = volume / 100
+      if(T.gainNode) {
+        console.log("gainNode is available " + fraction)
+        T.gainNode.gain.value = fraction * fraction
+        
       }
     },
 
