@@ -3,7 +3,7 @@
  * Webpack config for euphony.js library
  *
  * Author : jbear; JI-WOONG CHOI
- * Contact : http://jbear.co
+ * Contact : https://jbear.co
  * Copyright @ jbear
  *
  **/

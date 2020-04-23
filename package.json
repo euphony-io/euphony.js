@@ -12,6 +12,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "webpack --config webpack.config.js",
+    "build-dev": "webpack --config webpack.config.devel.js",
     "dev": "webpack-dev-server",
     "es6": "terser --compress --mangle -- euphony.js > ./dist/euphony.m.min.js"
   },
