@@ -290,6 +290,7 @@ export var Euphony = (function () {
 
       /* scriptProcessor is deprecated. so apply to AudioWorklet */
       if (T.isAudioWorkletAvailable) {
+        console.log("play :: AudioWorklet Mode")
         /* AudioWorkletNode Declaration */
         class EuphonyNode extends AudioWorkletNode {
           constructor (context) {
@@ -314,6 +315,7 @@ export var Euphony = (function () {
           T.setState("PLAYING")
         })
       } else {
+        console.log("play :: WebAudio API Mode ; deprecated")
         T.source.buffer = T.context.createBuffer(2, T.SAMPLERATE * 2, T.SAMPLERATE)
         T.scriptProcessor = T.context.createScriptProcessor(T.BUFFERSIZE, 0, 2)
         T.scriptProcessor.loop = isLoop
