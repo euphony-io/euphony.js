@@ -14,228 +14,233 @@
  */
 
 export var Euphony = (function () {
-  function euphony () {
-    var about = {
-      VERSION: '0.2.2',
-      AUTHOR: 'Ji-woong Choi'
-    }
-    
-    this.BUFFERSIZE = 2048
+    function euphony () {
+        var about = {
+            VERSION: '0.2.3',
+            AUTHOR: 'Ji-woong Choi'
+        }
+        
+        this.BUFFERSIZE = 2048;
 
-    this.PI = 3.141592653589793
-    this.PI2 = this.PI * 2
-    this.SAMPLERATE = 44100
-    this.SPAN = 86
-    this.BASE_FREQUENCY = 18000
-    this.CHANNEL = 1
-    this.setModulation('CPFSK')
+        this.PI = 3.141592653589793;
+        this.PI2 = this.PI * 2;
+        this.SAMPLERATE = 44100;
+        this.SPAN = 86;
+        this.BASE_FREQUENCY = 18000;
+        this.CHANNEL = 1;
+        this.setModulation('CPFSK');
 
-    this.context = new (window.AudioContext || window.webkitAudioContext)()
-    this.isSABAvailable = true
-    this.isAudioWorkletAvailable = Boolean(
-      this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function')
+        this.context = new (window.AudioContext || window.webkitAudioContext)();
+        this.isSABAvailable = true;
+        this.isAudioWorkletAvailable = Boolean(
+            this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
 
-    this.STATE = 0
-    this.isPlaying = false
-    /*
+        this.STATE = 0;
+        this.isPlaying = false;
+        /*
           DATE : 190916
           Firefox does not support SharedArrayBuffer due to the spectre set of vulnerabilties.
-          */
-    try {
-      const sab = SharedArrayBuffer
-    } catch (e) {
-      console.log(e instanceof ReferenceError)
-      this.isAudioWorkletAvailable = false
-      this.isSABAvailable = false
-    }
+        */
+        try {
+            const sab = SharedArrayBuffer;
+        } catch (e) {
+            console.log(e instanceof ReferenceError);
+            this.isAudioWorkletAvailable = false;
+            this.isSABAvailable = false;
+        }
 
-    this.initBuffers()
-  };
+        this.initBuffers();
+    };
 
-  euphony.prototype = {
-    initBuffers: function () {
-      const T = this
+    euphony.prototype = {
+        initBuffers: function () {
+            const T = this;
 
-      T.scriptProcessor = null
-      T.outBuffer = new Array()
-      T.playBuffer = new Array()
-      T.playBufferIdx = 0
+            T.scriptProcessor = null;
+            T.outBuffer = new Array();
+            T.playBuffer = new Array();
+            T.playBufferIdx = 0;
 
-      T.startPointBuffer = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN))
-      T.zeroBuffer = T.makeZeroSource()
-      /*
+            T.startPointBuffer = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN));
+            T.zeroBuffer = T.makeZeroSource();
+            /*
               CHANNEL 1 : 0 ~ 16
               CHANNEL 2 : 17 ~ 32
             */
-      for (let i = 0; i < 32; i++) {
-        T.outBuffer[i] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY + i * T.SPAN))
-      }
-      
-      T.progressIdx = 0
-      T.cp_index = 0
-      T.cp_last_theta = 0
-    },
-    setCode: function (data) {
-      const T = this
+            for (let i = 0; i < 32; i++) {
+                T.outBuffer[i] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY + i * T.SPAN));
+            }
+            
+            T.progressIdx = 0;
+            T.cp_index = 0;
+            T.cp_last_theta = 0;
+        },
+        setCode: function (data) {
+            const T = this;
 
-      /* 1) Ss is starting buffer to use trigger point
+            /* 1) Ss is starting buffer to use trigger point
                S includes starting buffer with crossfade effect.
                s is only starting buffer.
-             */
-      let code = 'Ss'
+            */
+            let code = 'Ss';
 
-      /* 2) Generate pure data code */
-      let dataCode = ''
-      for (let i = 0; i < data.length; i++) { dataCode += data.charCodeAt(i).toString(16) }
-      code += dataCode
+            /* 2) Generate pure data code */
+            let dataCode = '';
+            for (let i = 0; i < data.length; i++) { dataCode += data.charCodeAt(i).toString(16); }
+            code += dataCode;
 
-      /* 3) Generate checksum & parity code */
-      code += T.makeChecksum(dataCode).toString(16)
-      code += T.makeParallelParity(dataCode)
+            /* 3) Generate checksum & parity code */
+            code += T.makeChecksum(dataCode).toString(16);
+            code += T.makeParallelParity(dataCode);
 
-      /* 4) Setting Euphony Code */
-      T.setInnerCode(code)
+            /* 4) Setting Euphony Code */
+            T.setInnerCode(code);
 
-      /* 4) copy playBuffer to web audio buffer to use Web Audio API */
-      T.applyAudioBuffer()
-    },
+            /* 4) copy playBuffer to web audio buffer to use Web Audio API */
+            T.applyAudioBuffer();
+        },
 
-    setFrequency: function(freq) {
-      const T = this
-      T.playBufferIdx = 0
-      T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(freq), 3)
-    },
+        setFrequency: function(freq) {
+            const T = this;
 
-    addFrequency: function (freq) {
-      const T = this
-      T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(freq), 3)
-    },
-    /*
+            /* 1) Setting Euphony Code */
+            T.playBufferIdx = 0;
+            T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(freq), 3);
+
+            /* 2) Apply Audio Buffer */
+            T.applyAudioBuffer();
+        },
+
+        addFrequency: function (freq) {
+            const T = this;
+            T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(freq), 3);
+        },
+        /*
           Function Name :setInnerCode
           Description : Code Interpreter
-         */
-    setInnerCode: function (code) {
-      const T = this
+        */
+        setInnerCode: function (code) {
+            const T = this;
 
-      console.log(code)
-      switch (T.MODULATION_TYPE) {
-        case 0: // ASK
-          for (let i = 0; i < code.length; i++) {
-            const c = code[i]
-            switch (c) {
-              /* STARTING PART */
-              case 'S': case 's':
-                T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN), 3)
-                break
-                /* DATA CODE PART */
-              case '0': case '1': case '2':
-              case '3': case '4': case '5':
-              case '6': case '7': case '8':
-              case '9': case 'a': case 'b':
-              case 'c': case 'd': case 'e':
-              case 'f': {
-                const code_idx = parseInt(c, 16)
-                // change hexa to binary
-                const code_idx_binary = code_idx.toString(2)
-                for (let ci = 0; ci < code_idx_binary.length; ci++) {
-                  T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx_binary[ci] - '0')
+            console.log(code);
+            switch (T.MODULATION_TYPE) {
+            case 0: // ASK
+                for (let i = 0; i < code.length; i++) {
+                    const c = code[i];
+                    switch (c) {
+                        /* STARTING PART */
+                    case 'S': case 's':
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN), 3);
+                        break;
+                        /* DATA CODE PART */
+                    case '0': case '1': case '2':
+                    case '3': case '4': case '5':
+                    case '6': case '7': case '8':
+                    case '9': case 'a': case 'b':
+                    case 'c': case 'd': case 'e':
+                    case 'f': {
+                        const code_idx = parseInt(c, 16);
+                        // change hexa to binary
+                        const code_idx_binary = code_idx.toString(2);
+                        for (let ci = 0; ci < code_idx_binary.length; ci++) {
+                            T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx_binary[ci] - '0');
+                        }
+                    }
+                        break;
+                    }
                 }
-              }
-                break
+                break;
+            case 1: // FSK
+                for (let i = 0; i < code.length; i++) {
+                    const c = code[i];
+                    switch (c) {
+                        /* STARTING PART */
+                    case 'S': case 's':
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN), 3);
+                        break;
+                        /* DATA CODE PART */
+                    case '0': case '1': case '2':
+                    case '3': case '4': case '5':
+                    case '6': case '7': case '8':
+                    case '9': case 'a': case 'b':
+                    case 'c': case 'd': case 'e':
+                    case 'f': {
+                        const code_idx = parseInt(c, 16);
+                        T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
+                    }
+                        break;
+                    }
+                }
+                break;
+            case 2: // CPFSK
+                for (let i = 0; i < code.length; i++) {
+                    const c = code[i];
+                    switch (c) {
+                        /* STARTING PART */
+                    case 'S':
+                        T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeFrequencyByCP(T.BASE_FREQUENCY - T.SPAN), 2);
+                        break;
+                    case 's':
+                        T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.BASE_FREQUENCY - T.SPAN);
+                        break;
+                        /* DATA CODE PART */
+                    case '0': case '1': case '2':
+                    case '3': case '4': case '5':
+                    case '6': case '7': case '8':
+                    case '9': case 'a': case 'b':
+                    case 'c': case 'd': case 'e':
+                    case 'f': {
+                        const code_idx = parseInt(c, 16);
+                        T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
+                    }
+                        break;
+                    }
+                }
+                // fade out
+                T.playBuffer[T.playBufferIdx - 1] = T.crossfadeStaticBuffer(T.playBuffer[T.playBufferIdx - 1], 1);
+                break;
             }
-          }
-          break
-        case 1: // FSK
-          for (let i = 0; i < code.length; i++) {
-            const c = code[i]
-            switch (c) {
-              /* STARTING PART */
-              case 'S': case 's':
-                T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN), 3)
-                break
-                /* DATA CODE PART */
-              case '0': case '1': case '2':
-              case '3': case '4': case '5':
-              case '6': case '7': case '8':
-              case '9': case 'a': case 'b':
-              case 'c': case 'd': case 'e':
-              case 'f': {
-                const code_idx = parseInt(c, 16)
-                T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx)
-              }
-                break
-            }
-          }
-          break
-        case 2: // CPFSK
-          for (let i = 0; i < code.length; i++) {
-            const c = code[i]
-            switch (c) {
-              /* STARTING PART */
-              case 'S':
-                T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeFrequencyByCP(T.BASE_FREQUENCY - T.SPAN), 2)
-                break
-              case 's':
-                T.playBuffer[T.playBufferIdx++] = T.makeFrequencyByCP(T.BASE_FREQUENCY - T.SPAN)
-                break
-                /* DATA CODE PART */
-              case '0': case '1': case '2':
-              case '3': case '4': case '5':
-              case '6': case '7': case '8':
-              case '9': case 'a': case 'b':
-              case 'c': case 'd': case 'e':
-              case 'f': {
-                const code_idx = parseInt(c, 16)
-                T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx)
-              }
-                break
-            }
-          }
-          // fade out
-          T.playBuffer[T.playBufferIdx - 1] = T.crossfadeStaticBuffer(T.playBuffer[T.playBufferIdx - 1], 1)
-          break
-      }
-    },
-    /*
+        },
+        /*
           modulation_types
           0) ASK (Amplitude Shift Keying)
           1) FSK (Frequency Shift Keying)
           2) CPFSK (Continuous Phase Frequency Shift Keying)
         */
     setModulation: function (mode) {
-      const T = this
+        const T = this;
 
-      switch (mode) {
+        switch (mode) {
         case 'ASK': case 'ask':
-          T.MODULATION_TYPE = 0
-          break
+            T.MODULATION_TYPE = 0;
+            break;
         case 'FSK': case 'fsk':
-          T.MODULATION_TYPE = 1
-          break
+            T.MODULATION_TYPE = 1;
+            break;
         case 'CPFSK': case 'cpfsk':
         default: // if abnormal mode is inserted, default type is CPFSK.
-          T.MODULATION_TYPE = 2
-          break
-      }
+            T.MODULATION_TYPE = 2;
+            break;
+        }
     },
 
     setState: function (state) {
-        const T = this
+        const T = this;
         switch (state) {
           case 2:
           case "PAUSE":
-            T.STATE = 2
-            break
+            T.STATE = 2;
+            break;
           case 1:
           case "PLAYING":
-            T.STATE = 1
-            break
+            T.STATE = 1;
+            break;
           case 0:
           case "STOP":
-            T.STATE = 0
-            break
+            T.STATE = 0;
+            break;
         }
-        console.log("setState() :: " + state)
+        console.log("setState() :: " + state);
     },
 
     getState: function() {
@@ -243,132 +248,134 @@ export var Euphony = (function () {
     },
 
     applyAudioBuffer: function () {
-      const T = this
+        const T = this;
 
-      /*
-      Error Check
-      */
-      if(T.playBufferIdx == 0) {
-        console.log("Euphony Error : playBuffer was not defined")
-        return -1
-      }
-
-      console.log(T.playBuffer)
-      const frameCount = T.BUFFERSIZE * T.playBufferIdx
-      T.EuphonyArrayBuffer = T.context.createBuffer(T.CHANNEL, frameCount, T.SAMPLERATE)
-
-      const buffering = []
-      const bufferingIdx = []
-      for (let i = 0; i < T.CHANNEL; i++) {
-        buffering[i] = T.EuphonyArrayBuffer.getChannelData(i)
-        bufferingIdx[i] = 0
-      }
-
-      for (let i = 0; i < T.playBuffer.length; i += T.CHANNEL) {
-        for (let j = 0; j < T.BUFFERSIZE; j++) {
-          for (let c = 0; c < T.CHANNEL; c++) {
-            if (T.playBuffer[i + c]) buffering[c][bufferingIdx[c]++] = T.playBuffer[i + c][j]
-          }
+        /*
+          Error Check
+        */
+        if(T.playBufferIdx == 0) {
+            console.log("Euphony Error : playBuffer was not defined");
+            return -1;
         }
-      }
-    },
 
-    play: function (isLoop = true) {
-      const T = this
-      
-      switch(T.getState()) {
-        case 1: // PLAY
-          return
-        case 2: // PAUSE
-          this.setState("PLAYING")
-          T.context.resume()
-          return
-      }
+        console.log(T.playBuffer);
+        const frameCount = T.BUFFERSIZE * T.playBufferIdx;
+        T.EuphonyArrayBuffer = T.context.createBuffer(T.CHANNEL, frameCount, T.SAMPLERATE);
 
-      T.gainNode = T.context.createGain()
-      T.source = T.context.createBufferSource()
+        const buffering = [];
+        const bufferingIdx = [];
+        for (let i = 0; i < T.CHANNEL; i++) {
+            buffering[i] = T.EuphonyArrayBuffer.getChannelData(i);
+            bufferingIdx[i] = 0;
+        }
 
-      /* scriptProcessor is deprecated. so apply to AudioWorklet */
-      if (T.isAudioWorkletAvailable) {
-        console.log("play :: AudioWorklet Mode")
-        /* AudioWorkletNode Declaration */
-        class EuphonyNode extends AudioWorkletNode {
-          constructor (context) {
-            super(context, 'euphony-processor')
-            this.port.onmessage = e => {
-              console.log(e)
+        for (let i = 0; i < T.playBuffer.length; i += T.CHANNEL) {
+            for (let j = 0; j < T.BUFFERSIZE; j++) {
+                for (let c = 0; c < T.CHANNEL; c++) {
+                    if (T.playBuffer[i + c]) buffering[c][bufferingIdx[c]++] = T.playBuffer[i + c][j];
+                }
             }
-            this.port.postMessage({
-              message: 'created EuphonyNode'
-            })
+        }
+
+        return 0;
+    },
+
+      play: function (isLoop = true) {
+          const T = this;
+          
+          switch(T.getState()) {
+          case 1: // PLAY
+              return;
+          case 2: // PAUSE
+              this.setState("PLAYING");
+              T.context.resume();
+              return;
           }
-        }
 
-        const audioWorklet = T.context.audioWorklet
-        T.source.buffer = T.EuphonyArrayBuffer
-        T.source.loop = isLoop
-        T.context.audioWorklet.addModule('https://cdn.jsdelivr.net/gh/designe/euphony.js/euphony-processor.js').then(() => {
-          const euphonyWorkletNode = new EuphonyNode(T.context)
-          T.source.connect(euphonyWorkletNode).connect(T.gainNode).connect(T.context.destination)
-          T.source.start()
-          T.isPlaying = true
-          T.setState("PLAYING")
-        })
-      } else {
-        console.log("play :: WebAudio API Mode ; deprecated")
-        T.source.buffer = T.context.createBuffer(2, T.SAMPLERATE * 2, T.SAMPLERATE)
-        T.scriptProcessor = T.context.createScriptProcessor(T.BUFFERSIZE, 0, 2)
-        T.scriptProcessor.loop = isLoop
-        T.scriptProcessor.onaudioprocess = function (e) {
-          var outputBuf = e.outputBuffer.getChannelData(0)
-          var outputBuf2 = e.outputBuffer.getChannelData(1)
+          T.gainNode = T.context.createGain();
+          T.source = T.context.createBufferSource();
 
-          outputBuf.set(T.playBuffer[T.progressIdx])
-          outputBuf2.set(T.playBuffer[T.progressIdx])
+          /* scriptProcessor is deprecated. so apply to AudioWorklet */
+          if (T.isAudioWorkletAvailable) {
+              console.log("play :: AudioWorklet Mode");
+              /* AudioWorkletNode Declaration */
+              class EuphonyNode extends AudioWorkletNode {
+                  constructor (context) {
+                      super(context, 'euphony-processor');
+                      this.port.onmessage = e => {
+                          console.log(e);
+                      };
+                      this.port.postMessage({
+                          message: 'created EuphonyNode'
+                      });
+                  }
+              }
 
-          if (T.playBuffer.length == ++(T.progressIdx)) T.progressIdx = 0
-        }
+              const audioWorklet = T.context.audioWorklet;
+              T.source.buffer = T.EuphonyArrayBuffer;
+              T.source.loop = isLoop;
+              T.context.audioWorklet.addModule('https://cdn.jsdelivr.net/gh/designe/euphony.js/euphony-processor.js').then(() => {
+                  const euphonyWorkletNode = new EuphonyNode(T.context);
+                  T.source.connect(euphonyWorkletNode).connect(T.gainNode).connect(T.context.destination);
+                  T.source.start();
+                  T.isPlaying = true;
+                  T.setState("PLAYING");
+              });
+          } else {
+              console.log("play :: WebAudio API Mode ; deprecated");
+              T.source.buffer = T.context.createBuffer(2, T.SAMPLERATE * 2, T.SAMPLERATE);
+              T.scriptProcessor = T.context.createScriptProcessor(T.BUFFERSIZE, 0, 2);
+              T.scriptProcessor.loop = isLoop;
+              T.scriptProcessor.onaudioprocess = function (e) {
+                  var outputBuf = e.outputBuffer.getChannelData(0);
+                  var outputBuf2 = e.outputBuffer.getChannelData(1);
+                  
+                  outputBuf.set(T.playBuffer[T.progressIdx]);
+                  outputBuf2.set(T.playBuffer[T.progressIdx]);
 
-        T.source.connect(T.scriptProcessor)
-        T.scriptProcessor.connect(T.gainNode)
-        T.gainNode.connect(T.context.destination)
-        T.source.start()
-        T.isPlaying = true
-        T.setState("PLAYING")
-      }
-    },
+                  if (T.playBuffer.length == ++(T.progressIdx)) T.progressIdx = 0;
+              };
 
-    pause: function () {
-      const T = this
-      //T.source.stop()
-      T.context.suspend()
-      T.isPlaying = false
-      T.setState("PAUSE")
-    },
-
-    stop: function () {
-      const T = this
-      T.source.stop()
-      if (T.source.onended) { 
-        T.source.onended = function (e) {
-          if (T.scriptProcessor) {
-            T.scriptProcessor.disconnect(T.context)
-            T.source.disconnect(T.scriptProcessor)
+              T.source.connect(T.scriptProcessor);
+              T.scriptProcessor.connect(T.gainNode);
+              T.gainNode.connect(T.context.destination);
+              T.source.start();
+              T.isPlaying = true;
+              T.setState("PLAYING");
           }
-        }
-      }
-      else {
-        /* Some other browser might not have an onended callback function */
-        if (T.scriptProcessor) {
-          T.scriptProcessor.disconnect(T.context)
-          T.source.disconnect(T.scriptProcessor)
-        }
-      }
-      T.playBuffer = new Array()
-      T.playBufferIdx = 0
-      T.isPlaying = false
-      T.setState("STOP")
-    },
+      },
+
+        pause: function () {
+            const T = this;
+            //T.source.stop()
+            T.context.suspend();
+            T.isPlaying = false;
+            T.setState("PAUSE");
+        },
+
+        stop: function () {
+            const T = this;
+            T.source.stop();
+            if (T.source.onended) { 
+                T.source.onended = function (e) {
+                    if (T.scriptProcessor) {
+                        T.scriptProcessor.disconnect(T.context);
+                        T.source.disconnect(T.scriptProcessor);
+                    }
+                };
+            }
+            else {
+                /* Some other browser might not have an onended callback function */
+                if (T.scriptProcessor) {
+                    T.scriptProcessor.disconnect(T.context);
+                    T.source.disconnect(T.scriptProcessor);
+                }
+            }
+            T.playBuffer = new Array();
+            T.playBufferIdx = 0;
+            T.isPlaying = false;
+            T.setState("STOP");
+        },
 
     makeZeroSource: function () {
       const T = this

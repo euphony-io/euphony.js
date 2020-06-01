@@ -115,7 +115,7 @@ __webpack_require__.r(__webpack_exports__);
 var Euphony = function () {
   function euphony() {
     var about = {
-      VERSION: '0.2.2',
+      VERSION: '0.2.3',
       AUTHOR: 'Ji-woong Choi'
     };
     this.BUFFERSIZE = 2048;
@@ -132,9 +132,9 @@ var Euphony = function () {
     this.STATE = 0;
     this.isPlaying = false;
     /*
-          DATE : 190916
-          Firefox does not support SharedArrayBuffer due to the spectre set of vulnerabilties.
-          */
+      DATE : 190916
+      Firefox does not support SharedArrayBuffer due to the spectre set of vulnerabilties.
+    */
 
     try {
       const sab = SharedArrayBuffer;
@@ -158,9 +158,9 @@ var Euphony = function () {
       T.startPointBuffer = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY - T.SPAN));
       T.zeroBuffer = T.makeZeroSource();
       /*
-              CHANNEL 1 : 0 ~ 16
-              CHANNEL 2 : 17 ~ 32
-            */
+        CHANNEL 1 : 0 ~ 16
+        CHANNEL 2 : 17 ~ 32
+      */
 
       for (let i = 0; i < 32; i++) {
         T.outBuffer[i] = T.crossfadeStaticBuffer(T.makeStaticFrequency(T.BASE_FREQUENCY + i * T.SPAN));
@@ -173,9 +173,9 @@ var Euphony = function () {
     setCode: function (data) {
       const T = this;
       /* 1) Ss is starting buffer to use trigger point
-               S includes starting buffer with crossfade effect.
-               s is only starting buffer.
-             */
+         S includes starting buffer with crossfade effect.
+         s is only starting buffer.
+      */
 
       let code = 'Ss';
       /* 2) Generate pure data code */
@@ -200,8 +200,13 @@ var Euphony = function () {
     },
     setFrequency: function (freq) {
       const T = this;
+      /* 1) Setting Euphony Code */
+
       T.playBufferIdx = 0;
       T.playBuffer[T.playBufferIdx++] = T.crossfadeStaticBuffer(T.makeStaticFrequency(freq), 3);
+      /* 2) Apply Audio Buffer */
+
+      T.applyAudioBuffer();
     },
     addFrequency: function (freq) {
       const T = this;
@@ -209,9 +214,9 @@ var Euphony = function () {
     },
 
     /*
-          Function Name :setInnerCode
-          Description : Code Interpreter
-         */
+      Function Name :setInnerCode
+      Description : Code Interpreter
+    */
     setInnerCode: function (code) {
       const T = this;
       console.log(code);
@@ -350,11 +355,11 @@ var Euphony = function () {
     },
 
     /*
-          modulation_types
-          0) ASK (Amplitude Shift Keying)
-          1) FSK (Frequency Shift Keying)
-          2) CPFSK (Continuous Phase Frequency Shift Keying)
-        */
+      modulation_types
+      0) ASK (Amplitude Shift Keying)
+      1) FSK (Frequency Shift Keying)
+      2) CPFSK (Continuous Phase Frequency Shift Keying)
+    */
     setModulation: function (mode) {
       const T = this;
 
@@ -405,7 +410,7 @@ var Euphony = function () {
     applyAudioBuffer: function () {
       const T = this;
       /*
-      Error Check
+        Error Check
       */
 
       if (T.playBufferIdx == 0) {
@@ -431,6 +436,8 @@ var Euphony = function () {
           }
         }
       }
+
+      return 0;
     },
     play: function (isLoop = true) {
       const T = this;

@@ -1,6 +1,6 @@
 {
   "name": "euphony.js",
-  "version": "v0.2.2",
+  "version": "v0.2.3",
   "description": "Sound Communication Library",
   "main": "./euphony.js",
   "keywords": [
