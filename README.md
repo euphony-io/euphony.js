@@ -27,6 +27,35 @@ euphony.play();
 euphony.stop();
 ```
 
+## Setup local development installation
+### Installing Node.js and npm
+If you use ``conda``, you can get them with::
+
+    conda install -c conda-forge nodejs
+
+If you use [Homebrew](https://brew.sh/) on Mac OS X::
+
+    brew install node
+
+Installation on Linux may vary, but be aware that the `nodejs` or `npm` packages
+included in the system package repository may be too old to work properly.
+
+You can also use the installer from the [Node.js website](https://nodejs.org).
+
+### Installing node modules
+```
+cd euphony.js
+npm install
+```
+
+### Development Tip
+When doing development, you can use this command to run local server.  
+Check demo: http://localhost:8080/demo  
+Check test: http://localhost:8080/test
+```
+npm run dev
+```
+
 ## Contributing
 Changes are improvements are more than welcome! Feel Free to fork and open a pull request. Please make your changes in a specific branch and request to pull into `master`.
 

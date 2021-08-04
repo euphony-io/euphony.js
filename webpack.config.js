@@ -21,7 +21,7 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: '[name].js',
-	libraryTarget: 'window',
+    	libraryTarget: 'window',
     },
     mode: 'production',
     module: {
