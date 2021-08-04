@@ -30,23 +30,9 @@ export var Euphony = (function () {
         this.setModulation('CPFSK');
 
         this.context = new (window.AudioContext || window.webkitAudioContext)();
-        this.isSABAvailable = true;
-        this.isAudioWorkletAvailable = Boolean(
-            this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
-
+        this.isAudioWorkletAvailable = Boolean(this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
         this.STATE = 0;
         this.isPlaying = false;
-        /*
-          DATE : 190916
-          Firefox does not support SharedArrayBuffer due to the spectre set of vulnerabilties.
-        */
-        try {
-            const sab = SharedArrayBuffer;
-        } catch (e) {
-            console.log(e instanceof ReferenceError);
-            this.isAudioWorkletAvailable = false;
-            this.isSABAvailable = false;
-        }
         this.initBuffers();
     };
 
@@ -310,7 +296,6 @@ export var Euphony = (function () {
                     }
                 }
 
-                const audioWorklet = T.context.audioWorklet;
                 T.source.buffer = T.EuphonyArrayBuffer;
                 T.source.loop = isLoop;
                 T.context.audioWorklet.addModule('https://cdn.jsdelivr.net/gh/designe/euphony.js/euphony-processor.js').then(() => {
@@ -332,7 +317,8 @@ export var Euphony = (function () {
                     outputBuf.set(T.playBuffer[T.progressIdx]);
                     outputBuf2.set(T.playBuffer[T.progressIdx]);
 
-                    if (T.playBuffer.length == ++(T.progressIdx)) T.progressIdx = 0;
+                    if (T.playBuffer.length == ++(T.progressIdx)) 
+                        T.progressIdx = 0;
                 };
 
                 T.source.connect(T.scriptProcessor);
