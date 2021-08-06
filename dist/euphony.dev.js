@@ -1,103 +1,43 @@
-(function(e, a) { for(var i in a) e[i] = a[i]; }(window, /******/ (function(modules) { // webpackBootstrap
-/******/ 	// The module cache
-/******/ 	var installedModules = {};
-/******/
-/******/ 	// The require function
-/******/ 	function __webpack_require__(moduleId) {
-/******/
-/******/ 		// Check if module is in cache
-/******/ 		if(installedModules[moduleId]) {
-/******/ 			return installedModules[moduleId].exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = installedModules[moduleId] = {
-/******/ 			i: moduleId,
-/******/ 			l: false,
-/******/ 			exports: {}
-/******/ 		};
-/******/
-/******/ 		// Execute the module function
-/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-/******/
-/******/ 		// Flag the module as loaded
-/******/ 		module.l = true;
-/******/
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
-/******/ 	}
-/******/
-/******/
-/******/ 	// expose the modules object (__webpack_modules__)
-/******/ 	__webpack_require__.m = modules;
-/******/
-/******/ 	// expose the module cache
-/******/ 	__webpack_require__.c = installedModules;
-/******/
-/******/ 	// define getter function for harmony exports
-/******/ 	__webpack_require__.d = function(exports, name, getter) {
-/******/ 		if(!__webpack_require__.o(exports, name)) {
-/******/ 			Object.defineProperty(exports, name, { enumerable: true, get: getter });
-/******/ 		}
-/******/ 	};
-/******/
-/******/ 	// define __esModule on exports
-/******/ 	__webpack_require__.r = function(exports) {
-/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 		}
-/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 	};
-/******/
-/******/ 	// create a fake namespace object
-/******/ 	// mode & 1: value is a module id, require it
-/******/ 	// mode & 2: merge all properties of value into the ns
-/******/ 	// mode & 4: return value when already ns object
-/******/ 	// mode & 8|1: behave like require
-/******/ 	__webpack_require__.t = function(value, mode) {
-/******/ 		if(mode & 1) value = __webpack_require__(value);
-/******/ 		if(mode & 8) return value;
-/******/ 		if((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;
-/******/ 		var ns = Object.create(null);
-/******/ 		__webpack_require__.r(ns);
-/******/ 		Object.defineProperty(ns, 'default', { enumerable: true, value: value });
-/******/ 		if(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));
-/******/ 		return ns;
-/******/ 	};
-/******/
-/******/ 	// getDefaultExport function for compatibility with non-harmony modules
-/******/ 	__webpack_require__.n = function(module) {
-/******/ 		var getter = module && module.__esModule ?
-/******/ 			function getDefault() { return module['default']; } :
-/******/ 			function getModuleExports() { return module; };
-/******/ 		__webpack_require__.d(getter, 'a', getter);
-/******/ 		return getter;
-/******/ 	};
-/******/
-/******/ 	// Object.prototype.hasOwnProperty.call
-/******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
-/******/
-/******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "";
-/******/
-/******/
-/******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 0);
-/******/ })
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	// The require scope
+/******/ 	var __webpack_require__ = {};
+/******/ 	
 /************************************************************************/
-/******/ ([
-/* 0 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = __webpack_require__(1);
-
-
-/***/ }),
-/* 1 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Euphony", function() { return Euphony; });
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "Euphony": () => (/* binding */ Euphony)
+/* harmony export */ });
 /*
  * Copyright 2013-2019 EUPHONY. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -127,23 +67,9 @@ var Euphony = function () {
     this.CHANNEL = 1;
     this.setModulation('CPFSK');
     this.context = new (window.AudioContext || window.webkitAudioContext)();
-    this.isSABAvailable = true;
     this.isAudioWorkletAvailable = Boolean(this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
     this.STATE = 0;
     this.isPlaying = false;
-    /*
-      DATE : 190916
-      Firefox does not support SharedArrayBuffer due to the spectre set of vulnerabilties.
-    */
-
-    try {
-      const sab = SharedArrayBuffer;
-    } catch (e) {
-      console.log(e instanceof ReferenceError);
-      this.isAudioWorkletAvailable = false;
-      this.isSABAvailable = false;
-    }
-
     this.initBuffers();
   }
 
@@ -297,10 +223,8 @@ var Euphony = function () {
               case 'd':
               case 'e':
               case 'f':
-                {
-                  const code_idx = parseInt(c, 16);
-                  T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
-                }
+                const code_idx = parseInt(c, 16);
+                T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
                 break;
             }
           }
@@ -340,10 +264,8 @@ var Euphony = function () {
               case 'd':
               case 'e':
               case 'f':
-                {
-                  const code_idx = parseInt(c, 16);
-                  T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
-                }
+                const code_idx = parseInt(c, 16);
+                T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
                 break;
             }
           } // fade out
@@ -477,7 +399,6 @@ var Euphony = function () {
 
         }
 
-        const audioWorklet = T.context.audioWorklet;
         T.source.buffer = T.EuphonyArrayBuffer;
         T.source.loop = isLoop;
         T.context.audioWorklet.addModule('https://cdn.jsdelivr.net/gh/designe/euphony.js/euphony-processor.js').then(() => {
@@ -869,6 +790,8 @@ var Euphony = function () {
   };
   return euphony;
 }();
-
-/***/ })
-/******/ ])));
+var __webpack_export_target__ = window;
+for(var i in __webpack_exports__) __webpack_export_target__[i] = __webpack_exports__[i];
+if(__webpack_exports__.__esModule) Object.defineProperty(__webpack_export_target__, "__esModule", { value: true });
+/******/ })()
+;

@@ -16,7 +16,7 @@
 export var Euphony = (function () {
     function euphony() {
         var about = {
-            VERSION: '0.2.3',
+            VERSION: '0.2.4',
             AUTHOR: 'Ji-woong Choi'
         };
 
