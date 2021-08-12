@@ -57,7 +57,7 @@ npm run dev
 ```
 
 ## Contributing
-Changes are improvements are more than welcome! Feel Free to fork and open a pull request. Please make your changes in a specific branch and request to pull into `master`.
+Changes and improvements are more than welcome! Feel Free to fork and open a pull request. Please make your changes in a specific branch and request to pull into `master`.
 
 ## License
 Euphony is licensed under the Apache 2.0 license. (https://github.com/designe/euphony.js/blob/master/LICENSE)
