@@ -39,7 +39,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "Euphony": () => (/* binding */ Euphony)
 /* harmony export */ });
 /*
- * Copyright 2013-2019 EUPHONY. All Rights Reserved.
+ * Copyright 2013-2021 EUPHONY. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -55,17 +55,17 @@ __webpack_require__.r(__webpack_exports__);
 var Euphony = function () {
   function euphony() {
     var about = {
-      VERSION: '0.2.3',
+      VERSION: '0.2.4',
       AUTHOR: 'Ji-woong Choi'
     };
     this.BUFFERSIZE = 2048;
-    this.PI = 3.141592653589793;
+    this.PI = 3.1415926535897932384;
     this.PI2 = this.PI * 2;
     this.SAMPLERATE = 44100;
     this.SPAN = 86;
-    this.BASE_FREQUENCY = 18000;
+    this.BASE_FREQUENCY = 18017;
     this.CHANNEL = 1;
-    this.setModulation('CPFSK');
+    this.setModulation('FSK');
     this.context = new (window.AudioContext || window.webkitAudioContext)();
     this.isAudioWorkletAvailable = Boolean(this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
     this.STATE = 0;
@@ -474,9 +474,13 @@ var Euphony = function () {
     makeStaticFrequency: function (freq) {
       const T = this;
       const buffer = new Float32Array(T.BUFFERSIZE);
+      const phaseIncrement = T.PI2 * freq / T.SAMPLERATE;
+      let phase = 0.0;
 
       for (let i = 0; i < T.BUFFERSIZE; i++) {
-        buffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
+        buffer[i] = Math.sin(phase);
+        phase += phaseIncrement;
+        if (phase > T.PI2) phase -= T.PI2;
       }
 
       return buffer;
