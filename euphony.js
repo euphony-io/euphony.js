@@ -20,16 +20,16 @@ export var Euphony = (function () {
             AUTHOR: 'Ji-woong Choi'
         };
 
+        this.context = new (window.AudioContext || window.webkitAudioContext)();
+        this.SAMPLERATE = this.context.sampleRate;
         this.BUFFERSIZE = 2048;
         this.PI = 3.1415926535897932384;
         this.PI2 = this.PI * 2;
-        this.SAMPLERATE = 44100;
         this.SPAN = 86;
         this.BASE_FREQUENCY = 18017;
         this.CHANNEL = 1;
         this.setModulation('FSK');
 
-        this.context = new (window.AudioContext || window.webkitAudioContext)();
         this.isAudioWorkletAvailable = Boolean(this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function');
         this.STATE = 0;
         this.isPlaying = false;
