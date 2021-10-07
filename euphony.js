@@ -26,7 +26,7 @@ export var Euphony = (function () {
         this.PI = 3.1415926535897932384;
         this.PI2 = this.PI * 2;
         this.SPAN = 86;
-        this.BASE_FREQUENCY = 18017;
+        this.BASE_FREQUENCY = 18001;
         this.CHANNEL = 1;
         this.setModulation('FSK');
 
