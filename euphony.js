@@ -60,17 +60,8 @@ export var Euphony = (function () {
             T.cp_last_theta = 0;
         },
 
-        setCode: function (data, encodingType = 'ascii') {
-            const T = this;
-
-            /* 1) Ss is starting buffer to use trigger point
-               S includes starting buffer with crossfade effect.
-               s is only starting buffer.
-            */
-            let code = 'Ss';
+        makeEncodedData: function (data, encodingType) {
             let dataCode = '';
-
-            /* 2) Generate pure data code */
             if (encodingType == 'ascii') {
                 for (let i = 0; i < data.length; i++) {
                     dataCode += data.charCodeAt(i).toString(16);
@@ -108,7 +99,22 @@ export var Euphony = (function () {
             else {
                 console.log('Undefined encodingType: ' + encodingType);
             }
-            code += dataCode
+            return dataCode;
+        },
+
+        setCode: function (data, encodingType = 'ascii') {
+            const T = this;
+
+            /* 1) Ss is starting buffer to use trigger point
+               S includes starting buffer with crossfade effect.
+               s is only starting buffer.
+            */
+            let code = 'Ss';
+            let dataCode = '';
+
+            /* 2) Generate pure data code */
+            dataCode = T.makeEncodedData(data, encodingType);
+            code += dataCode;
 
             /* 3) Generate checksum & parity code */
             code += T.makeChecksum(dataCode).toString(16);
@@ -413,11 +419,11 @@ export var Euphony = (function () {
 
             const phaseIncrement = (T.PI2 * freq) / T.SAMPLERATE;
             let phase = 0.0;
-            
+
             for (let i = 0; i < T.BUFFERSIZE; i++) {
                 buffer[i] = Math.sin(phase);
                 phase += phaseIncrement;
-                if(phase > T.PI2) phase -= T.PI2;
+                if (phase > T.PI2) phase -= T.PI2;
             }
             return buffer;
         },
