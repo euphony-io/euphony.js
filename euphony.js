@@ -60,7 +60,49 @@ export var Euphony = (function () {
             T.cp_last_theta = 0;
         },
 
-        setCode: function (data) {
+        makeEncodedData: function (data, encodingType) {
+            let dataCode = '';
+            if (encodingType == 'ascii') {
+                for (let i = 0; i < data.length; i++) {
+                    dataCode += data.charCodeAt(i).toString(16);
+                }
+            }
+            else if (encodingType == 'utf8') {
+                for (let i = 0; i < data.length; i++) {
+                    let ch = data.charCodeAt(i);
+                    if (ch >= 0 && ch < 0x80) {
+                        dataCode += data.charCodeAt(i).toString(16);
+                    }
+                    else {
+                        dataCode += encodeURIComponent(data[i])
+                            .replace(/%/g, '')
+                            .toLowerCase();
+                    }
+                }
+            }
+            else if (encodingType == 'utf16') {
+                for (let i = 0; i < data.length; i++) {
+                    let ch = data.charCodeAt(i).toString(16);
+                    while (ch.length < 4)
+                        ch = '0' + ch
+                    dataCode += ch
+                }
+            }
+            else if (encodingType == 'utf32') {
+                for (let i = 0; i < data.length; i++) {
+                    let ch = data.charCodeAt(i).toString(16);
+                    while (ch.length < 8)
+                        ch = '0' + ch
+                    dataCode += ch
+                }
+            }
+            else {
+                console.log('Undefined encodingType: ' + encodingType);
+            }
+            return dataCode;
+        },
+
+        setCode: function (data, encodingType = 'ascii') {
             const T = this;
 
             /* 1) Ss is starting buffer to use trigger point
@@ -68,12 +110,10 @@ export var Euphony = (function () {
                s is only starting buffer.
             */
             let code = 'Ss';
+            let dataCode = '';
 
             /* 2) Generate pure data code */
-            let dataCode = '';
-            for (let i = 0; i < data.length; i++) {
-                dataCode += data.charCodeAt(i).toString(16);
-            }
+            dataCode = T.makeEncodedData(data, encodingType);
             code += dataCode;
 
             /* 3) Generate checksum & parity code */
@@ -151,9 +191,9 @@ export var Euphony = (function () {
                             case '6': case '7': case '8':
                             case '9': case 'a': case 'b':
                             case 'c': case 'd': case 'e':
-                            case 'f': 
+                            case 'f':
                                 const code_idx = parseInt(c, 16);
-                                T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);                            
+                                T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
                                 break;
                         }
                     }
@@ -175,7 +215,7 @@ export var Euphony = (function () {
                             case '6': case '7': case '8':
                             case '9': case 'a': case 'b':
                             case 'c': case 'd': case 'e':
-                            case 'f': 
+                            case 'f':
                                 const code_idx = parseInt(c, 16);
                                 T.playBuffer[T.playBufferIdx++] = T.getOutBuffer(code_idx);
                                 break;
@@ -317,7 +357,7 @@ export var Euphony = (function () {
                     outputBuf.set(T.playBuffer[T.progressIdx]);
                     outputBuf2.set(T.playBuffer[T.progressIdx]);
 
-                    if (T.playBuffer.length == ++(T.progressIdx)) 
+                    if (T.playBuffer.length == ++(T.progressIdx))
                         T.progressIdx = 0;
                 };
 
@@ -366,8 +406,8 @@ export var Euphony = (function () {
             const T = this;
             const buffer = new Float32Array(T.BUFFERSIZE);
 
-            for (let i = 0; i < T.BUFFERSIZE; i++) { 
-                buffer[i] = 0; 
+            for (let i = 0; i < T.BUFFERSIZE; i++) {
+                buffer[i] = 0;
             }
 
             return buffer;
@@ -379,11 +419,11 @@ export var Euphony = (function () {
 
             const phaseIncrement = (T.PI2 * freq) / T.SAMPLERATE;
             let phase = 0.0;
-            
+
             for (let i = 0; i < T.BUFFERSIZE; i++) {
                 buffer[i] = Math.sin(phase);
                 phase += phaseIncrement;
-                if(phase > T.PI2) phase -= T.PI2;
+                if (phase > T.PI2) phase -= T.PI2;
             }
             return buffer;
         },
@@ -451,8 +491,8 @@ export var Euphony = (function () {
             const T = this;
             const pBuffer = new Float32Array(buffer);
 
-            for (let i = 0; i < T.BUFFERSIZE; i++) { 
-                pBuffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE)); 
+            for (let i = 0; i < T.BUFFERSIZE; i++) {
+                pBuffer[i] = Math.sin(T.PI2 * freq * (i / T.SAMPLERATE));
             }
             return buffer;
         },
@@ -466,10 +506,10 @@ export var Euphony = (function () {
             var fade_section = T.BUFFERSIZE / 8;
 
             let pBuffer = null
-            if (buffer.constructor === Float32Array) { 
-                pBuffer = buffer; 
-            } else { 
-                pBuffer = new Float32Array(buffer); 
+            if (buffer.constructor === Float32Array) {
+                pBuffer = buffer;
+            } else {
+                pBuffer = new Float32Array(buffer);
             }
 
             for (let i = 0; i < fade_section; i++) {
